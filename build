@@ -1,0 +1,1 @@
+clang++ shapes.cpp rendering.cpp main.cpp RayTracer.cpp Debug.cpp  -I"./ref/include/" -lglfw -lAntTweakBar -framework OpenGL -framework Cocoa -Dnullptr=0 -std=c++0x -stdlib=libc++ -O4
