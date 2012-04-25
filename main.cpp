@@ -5,8 +5,8 @@
 #include "RayTracer.h"
 #include "debug.h"
 #include <thread>
-#include <functional>
 #include <chrono>
+#include <functional>
 #define GLFW_CDECL
 #include <AntTweakBar.h>
 using namespace std;
@@ -239,14 +239,14 @@ public:
     		glfwSwapBuffers(); GLE;
             running = !glfwGetKey( GLFW_KEY_ESC ) && glfwGetWindowParam( GLFW_OPENED );
             
-            float avg_krays_per_sec = 0;
+            float avg_ksamples_per_sec = 0;
             for(int i = 0; i < hw_conc; i++)
             {
-                avg_krays_per_sec += krays_per_sec[i];
+                avg_ksamples_per_sec += ksamples_per_sec[i];
             }
             //can average even though rays / group my not be equal (they're very close)
-            avg_krays_per_sec /= hw_conc;
-            //printf("perfstat - %f krays / sec\n", avg_krays_per_sec);
+            avg_ksamples_per_sec /= hw_conc;
+            printf("perfstat - %f ksamples / sec\n", avg_ksamples_per_sec);
     	}
         for(int i = 0; i < hw_conc; i++)
         {
@@ -258,7 +258,7 @@ public:
 		int i = 1;
         int frame = 0;
 		auto start = chrono::high_resolution_clock::now();
-		int total_rays = 0;
+		int samples_n = 0;
 		int max_samples = 10;
         while(running)
 		{     
@@ -267,17 +267,17 @@ public:
             bool clear = clear_flag[my_group];
             if(clear) clear_flag[my_group] = false;
             
-			total_rays += rt.raytrace(dd[my_group], total_groups, my_group, hw_conc, clear);
+			samples_n += rt.raytrace(dd[my_group], total_groups, my_group, hw_conc, clear);
 			if(i % 10 == 0)
 			{				
 				auto end = chrono::high_resolution_clock::now();
 				double ratio = (double)chrono::high_resolution_clock::period::num /  chrono::high_resolution_clock::period::den;
 				double s =  ((end - start) * ratio).count();
-                double rays_per_sec = total_rays / s;
-                krays_per_sec[my_group] = rays_per_sec / 1000;
+                double samples_per_sec = samples_n / s;
+                ksamples_per_sec[my_group] = (float)samples_per_sec / 1000.0f;
                 
 				start = end;
-				total_rays = 0;
+				samples_n = 0;
 			}
 			i++;
             frame++;
@@ -285,7 +285,7 @@ public:
 	}    
     bool clear_flag[32];
     int hw_conc;
-	float krays_per_sec[32];
+	float ksamples_per_sec[32];
     thread raytrace_threads[32];
     bool running;
 	GLuint texture;
@@ -294,9 +294,16 @@ public:
 	int w; int h;
 	ivec2 mouse_pos;
 };
+#include "asset.h"
 int main(int argc, char* argv[])
 {
+	auto scene = load_scene("assets/scene.obj", vec3(0, 1, 0), 0.06f);
     Program prog;
+	prog.rt.scene.scene = scene.get();
+	for(int tri_i = 0; tri_i < scene->triangles.size(); tri_i++)
+	{			
+		scene->triangles[tri_i].material = prog.rt.scene.spheres[0].material;
+	}
     prog.init();
     prog.main_loop();
 	return EXIT_SUCCESS;

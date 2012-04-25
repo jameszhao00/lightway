@@ -15,7 +15,7 @@ void Ray::intersect_with_discs(const Disc* discs, const int num_discs, Intersect
 			if(t > 0)
 			{
 				vec3 pt = dir * t + origin;
-				if(distance(pt, discs[i].center) < discs[i].radius)
+				if(length(pt - discs[i].center) < discs[i].radius)
 				{
 					intersections[i].hit = true;
 					intersections[i].material = discs[i].material;
@@ -68,7 +68,7 @@ void Ray::intersect_with_spheres(const Sphere* spheres, const int num_spheres, I
 				float t0_clamped = t0 < 0 ? 100000000 : t0;
 				float t1_clamped = t1 < 0 ? 100000000 : t1;
 
-				float t = min(t0_clamped, t1_clamped);
+				float t = glm::min(t0_clamped, t1_clamped);
 				
 				vec3 hit_pos = t * dir + origin;
 				vec3 normal = normalize(hit_pos - sph->center);
@@ -89,34 +89,49 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
 	{
 		vec3 barypos;
         bool hit = false;
-        if(!flip_triangle_dir) 
+        if(flip_triangle_dir) 
         {
             hit = glm::intersectRayTriangle(origin, dir, 
-                triangles[i].verts[2], 
-                triangles[i].verts[1], 
-                triangles[i].verts[0], 
+				triangles[i].vertices[2].position, 
+                triangles[i].vertices[1].position, 
+                triangles[i].vertices[0].position, 
                 barypos);
+			
+			intersections[i].hit = hit;
+			if(hit)
+			{
+				vec3 pos = 
+					triangles[i].vertices[0].position * barypos.y + 
+					triangles[i].vertices[1].position * barypos.x + 
+					triangles[i].vertices[2].position *(1-barypos.x-barypos.y);
+				intersections[i].position = pos;
+				intersections[i].material = triangles[i].material;
+				intersections[i].t = barypos.z;
+				intersections[i].normal = triangles[i].normal;
+			}
         }
         else
         {
             hit = glm::intersectRayTriangle(origin, dir, 
-                triangles[i].verts[0], 
-                triangles[i].verts[1], 
-                triangles[i].verts[2], 
+				triangles[i].vertices[0].position, 
+                triangles[i].vertices[1].position, 
+                triangles[i].vertices[2].position, 
                 barypos);
-        }
+			
+			
 
-		intersections[i].hit = hit;
-		if(hit)
-		{
-			vec3 pos = 
-				triangles[i].verts[0] * (1-barypos.x-barypos.y) + 
-				triangles[i].verts[1] * barypos.x + 
-				triangles[i].verts[2] * barypos.y;
-			intersections[i].position = pos;
-            intersections[i].material = triangles[i].material;
-			intersections[i].t = barypos.z;
-			intersections[i].normal = triangles[i].normal;
-		}
+			intersections[i].hit = hit;
+			if(hit)
+			{
+				vec3 pos = 
+					triangles[i].vertices[2].position * barypos.y + 
+					triangles[i].vertices[1].position * barypos.x + 
+					triangles[i].vertices[0].position * (1-barypos.x-barypos.y);
+				intersections[i].position = pos;
+				intersections[i].material = triangles[i].material;
+				intersections[i].t = barypos.z;
+				intersections[i].normal = triangles[i].normal;
+			}
+        }
 	}
 }

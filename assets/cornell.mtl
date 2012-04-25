@@ -1,0 +1,29 @@
+# MTL written from C:\Users\zhaoz3\Google Drive\raytracing\lightway\assets\Cornell.obj
+newmtl Material__72
+Kd 1 1 1
+Ns 1.07177
+d 1
+illum 1
+Ka 1 1 1
+Ks 0.2 0.2 0.2
+newmtl Material__73
+Kd 0 0.5 0
+Ns 1.07177
+d 1
+illum 2
+Ka 0 0.5 0
+Ks 0.2 0.2 0.2
+newmtl Material__74
+Kd 0.5 0 0
+Ns 1.07177
+d 1
+illum 2
+Ka 0.5 0 0
+Ks 0.2 0.2 0.2
+newmtl Material__75
+Kd 1 1 1
+Ns 1.07177
+d 1
+illum 2
+Ka 1 1 1
+Ks 0.2 0.2 0.2

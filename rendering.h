@@ -6,7 +6,7 @@ using namespace glm;
 struct Material;
 struct Camera
 {
-    Camera() : fovy(45), zn(1), zf(300), eye(vec3(0, 1, 0)), forward(vec3(0, 0, -1)), up(vec3(0, 1, 0)), mouse_pos(ivec2(-1, -1)) { }
+    Camera() : fovy(45), zn(1), zf(300), eye(vec3(0, 1, 5)), forward(vec3(0, 0, -1)), up(vec3(0, 1, 0)), mouse_pos(ivec2(-1, -1)) { }
 	mat4 projection() const
 	{
 		return perspective(45.0f, ar, zn, zf);

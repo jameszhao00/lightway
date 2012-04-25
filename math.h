@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <random>
+#include <limits>
 using namespace glm;
 #define PI 3.1415f
 #define INV_PI 1/PI
@@ -15,7 +16,7 @@ struct Rand
     std::mt19937 gen;
     float next01()
     {
-        return norm_unif_rand(gen);
+		return norm_unif_rand(gen);
     }
 };
 struct TestDeterministicRand

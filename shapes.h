@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include "math.h"
+#include "scene.h"
 using namespace glm;
 struct Intersection;
 struct Material;
@@ -28,23 +29,6 @@ struct Sphere
 	    : center(c), radius(r), material(m) { }
 	vec3 center;
 	float radius;
-    const Material* material;
-};
-struct Triangle
-{    
-    Triangle()// : Triangle(vec3(DEBUGVAL), vec3(DEBUGVAL), vec3(DEBUGVAL),
-        //vec3(DEBUGVAL), (Material*)DEBUGVAL) 
-	{ 
-		Triangle(vec3(DEBUGVAL), vec3(DEBUGVAL), vec3(DEBUGVAL),
-			vec3(DEBUGVAL), (Material*)DEBUGVAL);
-	}
-	Triangle(const vec3& v0, const vec3& v1, const vec3& v2, const vec3& n, const Material* m) 
-	    : normal(n), material(m)
-	{
-        verts[0] = v0; verts[1] = v1; verts[2] = v2;        
-	}
-	vec3 verts[3];
-	vec3 normal;
     const Material* material;
 };
 struct Ray

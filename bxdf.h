@@ -53,24 +53,30 @@ struct BlinnPhongBrdf
 {
 	void sample(const vec3& wo, const vec2& rand, vec3* wi, vec3* weight) const
 	{
+		assert(spec_power > 0);
+		assert(zup::cos_theta(wo) > 0);
 		float costheta = powf(rand.x, 1.f / (spec_power+1));
 		float sintheta = sqrtf(glm::max(0.0f, 1-costheta*costheta));
 		float phi = rand.y * 2 * PI;
 		vec3 h = zup::sph2cart(sintheta, costheta, phi);
 		if(dot(h, wo) < 0) h = -h;
-
+		float prob = pdf(*wi, wo);
 		*wi = reflect(-wo, h);
-		*weight = eval(*wi, wo) * zup::cos_theta(*wi) / pdf(*wi, wo);
+		*weight = eval(*wi, wo) * zup::cos_theta(*wi) / prob;
+		assert(zup::cos_theta(*wi) > 0);
+		assert(prob > 0);
 	}
 	float pdf(const vec3& wi, const vec3& wo) const
 	{
 		vec3 h = normalize(wi + wo);
 		float cos_theta_hi = dot(h, wi);
+		assert(cos_theta_hi > 0);
 		return (spec_power+1)*pow(zup::cos_theta(h), spec_power)
 			/ (2 * PI * 4 * cos_theta_hi);
 	}
 	vec3 eval(const vec3& wi, const vec3& wo) const
 	{		
+		assert(spec_power > 0);
 		vec3 h = normalize(wi + wo);
 				
 		vec3 f = f0 + (vec3(1) - f0) * vec3(glm::pow((float)(1 - dot(wi, h)), (float)5));
@@ -122,6 +128,7 @@ struct Dielectric
 };
 struct LambertBrdf
 {	
+
 	void sample(const vec2& rand, vec3* wi, vec3* weight) const
 	{
 		float a = sqrt(1 - rand.y);

@@ -17,7 +17,6 @@ const int num_spheres = 2;
 const int num_discs = 1;
 const int num_lights = 1;
 const int num_area_lights = 1;
-const int num_triangles = 1;
 struct Light
 {
 	Light () : color(1) { }
@@ -49,9 +48,9 @@ struct RectangularAreaLight
         return length(corners[0] - corners[3]) * length(corners[1] - corners[2]);
     }
 };
-struct Scene
+struct RTScene
 {
-	Scene()
+	RTScene() : scene(nullptr)
 	{
 		materials[0].lambert.albedo = vec3(.8, .2, .2);	
 		materials[0].phong.spec_power = 10;
@@ -67,7 +66,7 @@ struct Scene
 			fresnel->eta_outside = 1;
 			fresnel->cache_f0();
 
-			materials[0].refraction.enabled = true;
+			materials[0].refraction.enabled = false;
 
 		spheres[0] = Sphere(vec3(0, 1, -5), 1, &materials[0]);
 		spheres[1] = Sphere(vec3(2.2, 1, -5), 1, &materials[2]);
@@ -81,14 +80,15 @@ struct Scene
         area_lights[0].corners[2] = vec3(1, 2, 1);
         area_lights[0].corners[3] = vec3(-1, 2, 1);
         area_lights[0].normal = vec3(0, -1, 0);
-        area_lights[0].color = vec3(25);
+        area_lights[0].color = vec3(5);
 
-        triangles[0] = Triangle(vec3(-1, .2, -1),
+		triangles.push_back(Triangle(
+			vec3(-1, .2, -1),
             vec3(1, .2, -1), 
             vec3(0, .2, 1), 
             normalize(vec3(0.01, 1, 0)),
-            &materials[0]);
-            
+            &materials[0]));
+           
 
 	}
 	TwBar *bar;
@@ -108,10 +108,29 @@ struct Scene
 	Disc discs[num_discs];
 	Material materials[4];
 	Light lights[num_lights];
-	Triangle triangles[num_triangles];
+	vector<Triangle> triangles;
+
+	const StaticScene* scene;
 };
 class DebugDraw;
 const int FB_CAPACITY = 2048;
+
+struct Sample
+{
+	Sample() { reset(); }
+	Ray ray;
+	vec3 throughput;
+	vec3 radiance;
+	bool finished;
+	int depth;
+	void reset()
+	{
+		depth = 0;
+		radiance = vec3(0); 
+		throughput = vec3(1);
+		finished = false;
+	}
+};
 class RayTracer
 {    
 public:    
@@ -125,23 +144,26 @@ public:
 	{ 
 	    fb = new Color[FB_CAPACITY * FB_CAPACITY]; 
         linear_fb = new vec4[FB_CAPACITY * FB_CAPACITY];
+        sample_fb = new Sample[FB_CAPACITY * FB_CAPACITY];
 	}
     ~RayTracer() { delete [] fb; }
 	//returns rays count
+	void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, Intersection* i_buffer, int ibuffer_size);
     int raytrace(DebugDraw& dd, int total_groups, int my_group, int group_n, bool clear_fb);
     void resize(int w, int h);
-	vec3 trace_ray(const Scene& scene, 
+	vec3 trace_ray(const RTScene& scene, 
         Rand& rand,
 	    Intersection* i_buffer, 
 	    int ibuffer_size, DebugDraw& dd, const Ray& ray, int depth, bool debug,
 	    bool use_imp) const;
 	Camera camera;
     vec4* linear_fb;
+	Sample* sample_fb;
     Color* fb;
     int w; int h;
     ivec2 debug_pixel;
 	vec3 background;
-	Scene scene;
+	RTScene scene;
     Rand rand[32];
 	bool use_fresnel;
 	int spp;

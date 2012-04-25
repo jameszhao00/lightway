@@ -1,6 +1,7 @@
 #pragma once
 #include <list>
 #include <gl/glfw.h>
+#include <thread>
 #include <mutex>
 #include "rendering.h"
 #include "shapes.h"
@@ -43,7 +44,7 @@ public:
 	void add_sphere(const Sphere& sphere, vec3 color = vec3(1));
 	void add_ray(const Ray& ray, float length = -1, vec3 color = vec3(1));
 	void add_ray(const vec3& origin, const vec3& dir, float length = -1, vec3 color = vec3(1));
-	
+	void add_tri(const Triangle& tri, vec3 color = vec3(1));
 	void add_disc( const Disc& disc, vec3 color = vec3(1) );
 	void draw();
 	Camera camera;
@@ -52,6 +53,7 @@ public:
 	list<Colored<Sphere> > spheres[2];
 	list<Colored<DebugRay> > rays[2];
 	list<Colored<Disc> > discs[2];
+	list<Colored<Triangle>> triangles[2];
 	int current;
 	
     mutex flip_lock;
@@ -59,4 +61,5 @@ private:
 	void draw_ray(const DebugRay& ray, vec3 color = vec3(1));
 	void draw_sphere(const Sphere& sphere, vec3 color = vec3(1));
 	void draw_disc(const Disc& sphere, vec3 color = vec3(1));
+	void draw_tri(const Triangle& tri, vec3 color = vec3(1));
 };
