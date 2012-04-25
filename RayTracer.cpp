@@ -21,6 +21,7 @@ int closest_intersect_ray_scene(const RTScene& scene, const Ray& ray, Intersecti
 	assert(num_intersections_used < buffer_size);
     return closest_intersection(intersection_buffer, num_intersections_used);
 }
+const int RANDOM_TERMINATION_DEPTH = 3;
 const int MAX_DEPTH = 8;
 void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, Intersection* i_buffer, int ibuffer_size)
 {
@@ -32,6 +33,21 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 			sample->finished = true;
 			continue;
 		}
+		
+		if(sample->depth > RANDOM_TERMINATION_DEPTH)
+		{
+			//green = luminosity
+			float survival = glm::min(0.5f, sample->throughput.g);
+			if(rand.next01() > survival)
+			{
+				sample->finished = true;
+				continue;
+			}
+			//make up for the path termination
+			sample->throughput /= survival;
+			//not correct... but okay
+			sample->throughput = saturate(sample->throughput);
+		}
 		//trace the ray and find an intersection
 		int closest_i = closest_intersect_ray_scene(scene, sample->ray, i_buffer, ibuffer_size, false);
 		if(closest_i == -1)
@@ -40,7 +56,14 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 			sample->finished = true;
 			continue;
 		}
+		
 		Intersection closest = i_buffer[closest_i];
+		/*
+		if(dot(-sample->ray.dir, closest.normal) <= 0)
+		{
+			closest_intersect_ray_scene(scene, sample->ray, i_buffer, ibuffer_size, false);
+		}
+		*/
 		//update radiance with direct light
 		{
 			vec3 light_dir = normalize(scene.area_lights[0].sample_pt(rand) - closest.position);
@@ -67,27 +90,35 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 			}
 			vec3 wi_world;
 			vec3 weight;
-			bool sample_spec = rand.next01() > 1;
+			bool sample_spec = rand.next01() > 0.5;
 			if(sample_spec)
 			{
 				vec3 wo_local = vec3(transpose(rot) * vec4(-sample->ray.dir, 0));
 				vec3 wi_local;
-				closest.material->phong.sample(wo_local, vec2(rand.next01(), rand.next01()), &wi_local, &weight);		
+				closest.material->phong.sample(wo_local, rand, &wi_local, &weight);
 				wi_world = vec3(rot * vec4(wi_local, 0));
+				assert(wi_world.length() > 0 || weight.length() == 0);
 			}
 			else
 			{
 				vec3 wi_local;
 				closest.material->lambert.sample(vec2(rand.next01(), rand.next01()), &wi_local, &weight);			
-				wi_world = vec3(rot * vec4(wi_local, 0));
-			
+				wi_world = vec3(rot * vec4(wi_local, 0));			
 			}
 		
+			assert(weight.x >= 0 && weight.y >= 0 && weight.z >= 0);
 		
-			Ray wi_ray = Ray(closest.position + 0.0001f * wi_world, wi_world);   
 			sample->throughput *= weight;
-			sample->ray = wi_ray;
-			sample->depth++;
+			if(sample->throughput.x == 0 && sample->throughput.y == 0 && sample->throughput.z == 0)
+			{
+				sample->finished = true;
+			}
+			else
+			{				
+				Ray wi_ray = Ray(closest.position + 0.0001f * wi_world, wi_world);
+				sample->ray = wi_ray;
+				sample->depth++;
+			}
 		}
 	}
 }
@@ -138,7 +169,7 @@ vec3 RayTracer::trace_ray(const RTScene& scene, Rand& rand,
 		{
 			vec3 wo_local = vec3(transpose(rot) * vec4(-ray.dir, 0));
 			vec3 wi_local;
-			closest.material->phong.sample(wo_local, vec2(rand.next01(), rand.next01()), &wi_local, &weight);		
+			closest.material->phong.sample(wo_local, rand, &wi_local, &weight);		
 			wi_world = vec3(rot * vec4(wi_local, 0));
 		}
 		else

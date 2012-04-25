@@ -42,5 +42,5 @@ struct Ray
 	vec3 dir;
     void intersect_with_discs(const Disc* discs, const int num_discs, Intersection* intersections) const;
     void intersect_with_spheres(const Sphere* spheres, const int num_spheres, Intersection* intersections) const;
-	void intersect_with_triangles(const Triangle* triangles, const int num_tris, Intersection* intersections, bool flip_triangle_dir) const;        
+	void intersect_with_triangles(const Triangle* triangles, const int num_tris, Intersection* intersections, bool flip_ray) const;        
 };

@@ -33,6 +33,10 @@ namespace zup // z up
 	{
 		return vec3(sintheta * cos(phi), sintheta * sin(phi), costheta);
 	}
+	inline bool same_hemi(const vec3& a, const vec3& b)
+	{
+		return a.z * b.z > 0;
+	}
 };
 struct Fresnel
 {	
@@ -51,20 +55,25 @@ struct Fresnel
 };
 struct BlinnPhongBrdf
 {
-	void sample(const vec3& wo, const vec2& rand, vec3* wi, vec3* weight) const
+	void sample(const vec3& wo, Rand& rand, vec3* wi, vec3* weight) const
 	{
 		assert(spec_power > 0);
-		assert(zup::cos_theta(wo) > 0);
-		float costheta = powf(rand.x, 1.f / (spec_power+1));
+
+		float r1 = rand.next01(); float r2 = rand.next01();
+		float costheta = powf(r1, 1.f / (spec_power+1));
 		float sintheta = sqrtf(glm::max(0.0f, 1-costheta*costheta));
-		float phi = rand.y * 2 * PI;
+		float phi = r2 * 2 * PI;
 		vec3 h = zup::sph2cart(sintheta, costheta, phi);
-		if(dot(h, wo) < 0) h = -h;
+		bool flipped = false;
+		if(!zup::same_hemi(wo, h)) {h = -h; flipped = true; }
+		*wi = reflect(-wo, h);	
+		
+
 		float prob = pdf(*wi, wo);
-		*wi = reflect(-wo, h);
+		
 		*weight = eval(*wi, wo) * zup::cos_theta(*wi) / prob;
-		assert(zup::cos_theta(*wi) > 0);
 		assert(prob > 0);
+		assert(weight->x > 0 && weight->y > 0 && weight->z > 0);
 	}
 	float pdf(const vec3& wi, const vec3& wo) const
 	{

@@ -43,7 +43,7 @@ struct Camera
 	void on_keyboard_event(char key)
 	{
 		vec3 left = cross(up, forward);
-		float scale = 0.01f;
+		float scale = 0.08f;
 		if(key == 'W')
 		{
 			eye += scale * forward;

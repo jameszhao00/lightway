@@ -279,6 +279,14 @@ public:
 				start = end;
 				samples_n = 0;
 			}
+			/*
+			if(((chrono::high_resolution_clock::now() - start) * 
+				(double)chrono::high_resolution_clock::period::num /  chrono::high_resolution_clock::period::den).count() > 5)
+			{
+				cout << "5 seconds... exiting";
+				break;
+			}
+			*/
 			i++;
             frame++;
 		}
@@ -297,7 +305,13 @@ public:
 #include "asset.h"
 int main(int argc, char* argv[])
 {
-	auto scene = load_scene("assets/scene.obj", vec3(0, 1, 0), 0.06f);
+	/*
+	Triangle t(vec3(-10, 0, 0), vec3(300, 0, 0), vec3(10, 0, 10), vec3(0, 1, 0));
+	Ray r(vec3(2, 30, 0), vec3(0, -1, 0));
+	Intersection it;
+	r.intersect_with_triangles(&t, 1, &it, false);
+	*/
+	auto scene = load_scene("assets/scene.obj", vec3(0, 0.02, 0), 0.06f);
     Program prog;
 	prog.rt.scene.scene = scene.get();
 	for(int tri_i = 0; tri_i < scene->triangles.size(); tri_i++)
