@@ -181,7 +181,6 @@ int RayTracer::raytrace(DebugDraw& dd, int total_groups, int my_group, int group
 	for(int i = 0; i < h; i++)
 	{
 		if((i % groups_n) != my_group) continue;
-        samples_n += w;
 		for(int j = 0; j < w; j++)
 		{
             bool debug = false;
@@ -191,44 +190,54 @@ int RayTracer::raytrace(DebugDraw& dd, int total_groups, int my_group, int group
 				debug = true;
 			}
 			
-			vec2 pixel_pos(j, i);
-			
-			vec2 sample_pos = pixel_pos + vec2(rand[my_group].next01(), rand[my_group].next01());
-					
-			vec4 ndc((sample_pos.x/w-0.5)*2, (sample_pos.y/h-0.5)*2, 1, 1);
-			vec4 d_comp = inv_proj * ndc;
-			d_comp = d_comp/d_comp.w;
-			d_comp = inv_view * d_comp;
-			vec3 d = normalize(vec3(d_comp));
-			Ray ray(o, d);
-
 			
 			Sample* sample = &sample_fb[fb_i];
-			sample->ray = ray;
+			if(sample->finished)
+			{				
+				
+				samples_n += 1;
+				vec3 color = sample->radiance;
 
-			while(!sample->finished)
+				vec3 existing_color = vec3(linear_fb[fb_i]);
+				float samples_count = linear_fb[fb_i].w + 1;
+
+				vec3 mixed_color = vec3((samples_count - 1) / samples_count) * existing_color + 
+					vec3(1/samples_count) * color;
+				linear_fb[fb_i] = vec4(mixed_color, samples_count);
+            
+				vec3 tonemapped = mixed_color / (vec3(1) + mixed_color);
+				vec3 srgb = pow(tonemapped, vec3(1/2.2f));
+			
+				fb[fb_i].r = (int)floor(srgb.x * 255);
+				fb[fb_i].g = (int)floor(srgb.y * 255);
+				fb[fb_i].b = (int)floor(srgb.z * 255);
+				fb[fb_i].a = 255;
+			}
+			if(sample->finished || clear_fb)
+			{
+				sample->reset();
+
+				if(clear_fb)
+				{
+					linear_fb[fb_i] = vec4(0);
+				}
+				
+				vec2 pixel_pos(j, i);			
+				vec2 sample_pos = pixel_pos + vec2(rand[my_group].next01(), rand[my_group].next01());					
+				vec4 ndc((sample_pos.x/w-0.5)*2, (sample_pos.y/h-0.5)*2, 1, 1);
+				vec4 d_comp = inv_proj * ndc;
+				d_comp = d_comp/d_comp.w;
+				d_comp = inv_view * d_comp;
+				vec3 d = normalize(vec3(d_comp));
+				Ray ray(o, d);
+
+				sample->ray = ray;
+			}
+
+			//while(!sample->finished)
 			{
 				process_samples(scene, rand[my_group], sample, 1, i_buffer, ibuffer_size);
 			}
-							
-			vec3 color = sample->radiance;
-
-			vec3 existing_color = vec3(linear_fb[fb_i]);
-			float samples_count = linear_fb[fb_i].w + 1;
-			if(clear_fb) samples_count = 1;
-			vec3 mixed_color = vec3((samples_count - 1) / samples_count) * existing_color + 
-				vec3(1/samples_count) * color;
-			linear_fb[fb_i] = vec4(mixed_color, samples_count);
-            
-			vec3 tonemapped = mixed_color / (vec3(1) + mixed_color);
-			vec3 srgb = pow(tonemapped, vec3(1/2.2f));
-			
-			fb[fb_i].r = (int)floor(srgb.x * 255);
-			fb[fb_i].g = (int)floor(srgb.y * 255);
-			fb[fb_i].b = (int)floor(srgb.z * 255);
-			fb[fb_i].a = 255;
-
-			sample->reset();
 				
 			
 		}
