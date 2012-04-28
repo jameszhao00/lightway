@@ -2,6 +2,7 @@
 #include "math.h"
 #include <algorithm>
 using namespace std;
+using namespace glm;
 /*
 struct ___Brdf
 {
@@ -68,6 +69,10 @@ struct BlinnPhongBrdf
 		if(!zup::same_hemi(wo, h)) {h = -h; flipped = true; }
 		*wi = reflect(-wo, h);	
 		
+		if(zup::cos_theta(*wi) < 0)
+		{
+			*weight = vec3(0); return;
+		}
 
 		float prob = pdf(*wi, wo);
 		

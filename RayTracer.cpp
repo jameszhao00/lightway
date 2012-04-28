@@ -1,11 +1,14 @@
+#include "pch.h"
 #include "RayTracer.h"
 #include "debug.h"
 #include "sampling.h"
 #include "bxdf.h"
+#include <glm/ext.hpp>
 #include <iostream>
 //returns -1 if doesn't intersect
 int closest_intersect_ray_scene(const RTScene& scene, const Ray& ray, Intersection* intersection_buffer, int buffer_size, bool flip_triangle_dir)
 {
+	/*
 	int num_intersections_used = 0;
 	ray.intersect_with_spheres(scene.spheres, num_spheres, &intersection_buffer[num_intersections_used]);
 	num_intersections_used += num_spheres;
@@ -20,10 +23,25 @@ int closest_intersect_ray_scene(const RTScene& scene, const Ray& ray, Intersecti
 
 	assert(num_intersections_used < buffer_size);
     return closest_intersection(intersection_buffer, num_intersections_used);
+	*/
+	int hit_i = scene.accl->intersect(ray, intersection_buffer, buffer_size, flip_triangle_dir);
+	return hit_i;
 }
-const int RANDOM_TERMINATION_DEPTH = 3;
-const int MAX_DEPTH = 8;
-void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, Intersection* i_buffer, int ibuffer_size)
+const int RANDOM_TERMINATION_DEPTH = 2;
+const int MAX_DEPTH = 4;
+
+void RTScene::init_tweaks()
+{		 
+	bar = TwNewBar("Material");
+	TwAddVarRW(bar, "Ball Albedo", TW_TYPE_COLOR3F, value_ptr(materials[0].lambert.albedo), "");
+	TwAddVarRW(bar, "Ball Roughness", TW_TYPE_FLOAT, &materials[0].phong.spec_power, "");
+	TwAddVarRW(bar, "Ball Specular", TW_TYPE_COLOR3F, value_ptr(materials[0].phong.f0), "");
+		
+	TwAddVarRW(bar, "Ball2 Albedo", TW_TYPE_COLOR3F, value_ptr(materials[2].lambert.albedo), "");
+	TwAddVarRW(bar, "Ball2 Roughness", TW_TYPE_FLOAT, &materials[2].phong.spec_power, "");
+	TwAddVarRW(bar, "Ball2 Specular", TW_TYPE_COLOR3F, value_ptr(materials[2].phong.f0), "");
+}
+void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, Intersection* i_buffer, int ibuffer_size, bool debug)
 {
 	for(int sample_i = 0; sample_i < sample_n; sample_i++)
 	{
@@ -49,7 +67,8 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 			sample->throughput = saturate(sample->throughput);
 		}
 		//trace the ray and find an intersection
-		int closest_i = closest_intersect_ray_scene(scene, sample->ray, i_buffer, ibuffer_size, false);
+		int closest_i = scene.accl->intersect(sample->ray, i_buffer, ibuffer_size, false, debug);
+			//closest_intersect_ray_scene(scene, sample->ray, i_buffer, ibuffer_size, false);
 		if(closest_i == -1)
 		{
 			sample->radiance += sample->throughput * background;
@@ -68,7 +87,8 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 		{
 			vec3 light_dir = normalize(scene.area_lights[0].sample_pt(rand) - closest.position);
 			Ray shadow_ray(closest.position +  light_dir * 0.0001f, light_dir);
-			int shadow_hit_i = closest_intersect_ray_scene(scene, shadow_ray, i_buffer, ibuffer_size, true);
+			int shadow_hit_i =  scene.accl->intersect(shadow_ray, i_buffer, ibuffer_size, true, false);
+				//closest_intersect_ray_scene(scene, shadow_ray, i_buffer, ibuffer_size, true);
 			if(!closest.material->refraction.enabled)
 			{
 				bool visibility = (shadow_hit_i == -1);
@@ -91,6 +111,7 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 			vec3 wi_world;
 			vec3 weight;
 			bool sample_spec = rand.next01() > 0.5;
+			auto ndotv = dot(-sample->ray.dir, closest.normal);
 			if(sample_spec)
 			{
 				vec3 wo_local = vec3(transpose(rot) * vec4(-sample->ray.dir, 0));
@@ -122,6 +143,7 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 		}
 	}
 }
+/*
 vec3 RayTracer::trace_ray(const RTScene& scene, Rand& rand,
                             Intersection* i_buffer, int ibuffer_size,
 						  DebugDraw& dd, const Ray& ray, int depth, bool debug, bool use_imp) const
@@ -188,23 +210,24 @@ vec3 RayTracer::trace_ray(const RTScene& scene, Rand& rand,
 	}
     
     return radiance;
-}
+}*/
 int RayTracer::raytrace(DebugDraw& dd, int total_groups, int my_group, int groups_n, bool clear_fb)
 {
+	bool flip = false;
 	float zn = 1; float zf = 50;
 	int rays_pp = 1;
 	mat4 inv_view = inverse(camera.view());
 	mat4 inv_proj = inverse(camera.projection());
 	//Intersection intersections[2];
 	vec3 o = camera.eye;
-	const int ibuffer_size = 1024;
+	const int ibuffer_size = 6000;
 	Intersection i_buffer[ibuffer_size];
 	//for(int i = 0; i < num_spheres; i++) dd.add_sphere(scene.spheres[i], vec3(.1, 0, 0));
-	dd.add_disc(scene.discs[0], vec3(0, 1, 0));
+	//dd.add_disc(scene.discs[0], vec3(0, 1, 0));
 	
     int i_start = (int)floor((float)my_group/total_groups * h);
     int i_end = (int)floor((float)(my_group+1)/total_groups * h);
-	for(int i = 0; i < scene.scene->triangles.size(); i++) dd.add_tri(scene.scene->triangles[i]);
+	//for(int i = 0; i < scene.scene->triangles.size(); i++) dd.add_tri(scene.scene->triangles[i], vec3(0, 1, 0));
     
     //printf("thread %d processing from %d to %d\n", my_group, i_start, i_end);
     int samples_n = 0;
@@ -220,9 +243,10 @@ int RayTracer::raytrace(DebugDraw& dd, int total_groups, int my_group, int group
 			{
 				debug = true;
 			}
-			
-			
 			Sample* sample = &sample_fb[fb_i];
+			
+			
+			
 			if(sample->finished)
 			{				
 				
@@ -264,16 +288,69 @@ int RayTracer::raytrace(DebugDraw& dd, int total_groups, int my_group, int group
 
 				sample->ray = ray;
 			}
-
+			if(0)//debug)
+			{
+				if(sample->depth == 0)
+				{
+					dd.flip();
+					//test full traversal
+					Ray ray = sample->ray;//Ray ray(vec3(0, 1,5), normalize(vec3(-0.20645134,-0.14003338,-0.96838450 )));
+					dd.add_ray(ray);
+					vec3 t_delta, step, t_max;
+					ivec3 cellid;
+					ivec3 out_cell;
+					
+					scene.accl->dda_vals(ray, &t_delta, &step, &t_max, &cellid, &out_cell);
+					//dd.add_sphere(Sphere(ray.at(t_exit), 0.005f, nullptr), vec3(1, 0, 0));
+					for(int i = 0; i < 8; i++)
+					{			
+						{
+							auto voxel = scene.accl->cell(cellid);
+							const Triangle* tris = voxel->data;
+							for(int i = 0; i < voxel->count; i++)
+							{
+								dd.add_tri(tris[i], vec3(0, 1, 0));
+								//cout << "hit tri with ndotv = " << dot(-sample->ray.dir, tris[i].normal) << endl;
+							}
+						}
+						float debugVal = -1;
+						bool hit = scene.accl->dda_next(t_delta, step, out_cell, &t_max, &cellid, &debugVal);
+						if(!hit) break;
+						//cout << "iteration t " << debugVal << endl;
+						if(glm::any(glm::lessThan(cellid, ivec3(0))) || glm::any(glm::greaterThanEqual(cellid, scene.accl->subdivisions)))
+						{
+							dd.add_sphere(Sphere(ray.at(debugVal), 0.01f, nullptr), vec3(1, 0, 1));
+						}
+						else
+						{
+							dd.add_sphere(Sphere(ray.at(debugVal), 0.01f, nullptr), vec3(0, 0, 1));
+						
+						}
+						//if(i == 1)
+						
+					}
+					for(int i = 0; i < scene.accl->subdivisions.x; i++)
+						for(int j = 0; j < scene.accl->subdivisions.y; j++)
+							for(int k = 0; k < scene.accl->subdivisions.z; k++)
+							{
+							
+								dd.add_aabb(scene.accl->cell_bound(ivec3(i, j, k)));
+							}
+					
+				}
+			}
+			if(i == 159 && j == 251)
+			{
+				//cout << "" ;
+			}
 			//while(!sample->finished)
 			{
-				process_samples(scene, rand[my_group], sample, 1, i_buffer, ibuffer_size);
+				process_samples(scene, rand[my_group], sample, 1, i_buffer, ibuffer_size, debug && sample->depth == 0);
 			}
 				
 			
 		}
 	}
-	dd.flip();
     return samples_n;
 }
 

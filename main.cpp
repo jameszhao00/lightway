@@ -1,3 +1,4 @@
+#include "pch.h"
 #include <cstdio>
 #include <iostream>
 #include <list>
@@ -303,21 +304,18 @@ public:
 	ivec2 mouse_pos;
 };
 #include "asset.h"
+#include "test_uniformgrid.h"
 int main(int argc, char* argv[])
 {
-	/*
-	Triangle t(vec3(-10, 0, 0), vec3(300, 0, 0), vec3(10, 0, 10), vec3(0, 1, 0));
-	Ray r(vec3(2, 30, 0), vec3(0, -1, 0));
-	Intersection it;
-	r.intersect_with_triangles(&t, 1, &it, false);
-	*/
-	auto scene = load_scene("assets/scene.obj", vec3(0, 0.02, 0), 0.06f);
+	test_uniform_grid();
+	auto scene = load_scene("assets/bunny.obj", vec3(0, 0, 0), 10);
     Program prog;
 	prog.rt.scene.scene = scene.get();
 	for(int tri_i = 0; tri_i < scene->triangles.size(); tri_i++)
 	{			
 		scene->triangles[tri_i].material = prog.rt.scene.spheres[0].material;
 	}
+	prog.rt.scene.make_accl();
     prog.init();
     prog.main_loop();
 	return EXIT_SUCCESS;

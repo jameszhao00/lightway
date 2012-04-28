@@ -1,12 +1,12 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include <glm/ext.hpp>
 #include <AntTweakBar.h>
 #include "rendering.h"
 #include "shapes.h"
 #include "math.h"
 #include "shading/material.h"
+#include "uniformgrid.h"
 using namespace glm;
 struct Color
 {
@@ -91,25 +91,19 @@ struct RTScene
            
 
 	}
-	TwBar *bar;
-	void init_tweaks()
-	{		 
-		bar = TwNewBar("Material");
-		TwAddVarRW(bar, "Ball Albedo", TW_TYPE_COLOR3F, value_ptr(materials[0].lambert.albedo), "");
-		TwAddVarRW(bar, "Ball Roughness", TW_TYPE_FLOAT, &materials[0].phong.spec_power, "");
-		TwAddVarRW(bar, "Ball Specular", TW_TYPE_COLOR3F, value_ptr(materials[0].phong.f0), "");
-		
-		TwAddVarRW(bar, "Ball2 Albedo", TW_TYPE_COLOR3F, value_ptr(materials[2].lambert.albedo), "");
-		TwAddVarRW(bar, "Ball2 Roughness", TW_TYPE_FLOAT, &materials[2].phong.spec_power, "");
-		TwAddVarRW(bar, "Ball2 Specular", TW_TYPE_COLOR3F, value_ptr(materials[2].phong.f0), "");
+	void make_accl()
+	{		
+		accl = make_uniform_grid(*(this->scene), ivec3(50));
 	}
+	TwBar *bar;
+	void init_tweaks();
     RectangularAreaLight area_lights[num_area_lights];
 	Sphere spheres[num_spheres];
 	Disc discs[num_discs];
 	Material materials[4];
 	Light lights[num_lights];
 	vector<Triangle> triangles;
-
+	unique_ptr<UniformGrid> accl;
 	const StaticScene* scene;
 };
 class DebugDraw;
@@ -148,14 +142,16 @@ public:
 	}
     ~RayTracer() { delete [] fb; }
 	//returns rays count
-	void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, Intersection* i_buffer, int ibuffer_size);
+	void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, Intersection* i_buffer, int ibuffer_size, bool debug);
     int raytrace(DebugDraw& dd, int total_groups, int my_group, int group_n, bool clear_fb);
     void resize(int w, int h);
+	/*
 	vec3 trace_ray(const RTScene& scene, 
         Rand& rand,
 	    Intersection* i_buffer, 
 	    int ibuffer_size, DebugDraw& dd, const Ray& ray, int depth, bool debug,
 	    bool use_imp) const;
+		*/
 	Camera camera;
     vec4* linear_fb;
 	Sample* sample_fb;

@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <memory>
-#include <glm/glm.hpp>
+#include "math.h"
 #include "bxdf.h"
 using namespace glm;
 using namespace std;

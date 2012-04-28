@@ -1,5 +1,6 @@
+#include "pch.h"
 #include "asset.h"
-#include <glm/glm.hpp>
+#include "math.h"
 #include <glm/ext.hpp>
 #include <assimp/assimp.hpp>  
 #include <assimp/aiScene.h>   
@@ -23,7 +24,8 @@ unique_ptr<StaticScene> load_scene(string path, vec3 translation, float scale)
 		aiProcess_PreTransformVertices	 |
         aiProcess_Triangulate            |
 		aiProcess_GenNormals			|
-        //aiProcess_JoinIdenticalVertices  |
+		aiProcess_FixInfacingNormals | 
+        aiProcess_JoinIdenticalVertices  |
         aiProcess_SortByPType);
 
 	mat4 t = glm::translate(translation) * glm::scale(vec3(scale));

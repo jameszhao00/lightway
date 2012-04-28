@@ -1,4 +1,6 @@
+#include "pch.h"
 #include "debug.h"
+#include <glm/ext.hpp>
 void DebugDraw::init()
 {
 	quad = gluNewQuadric();
@@ -48,6 +50,9 @@ void DebugDraw::flip()
 	spheres[current].clear();
 	rays[current].clear();
 	discs[current].clear();
+	triangles[current].clear();
+	
+	aabbs[current].clear();
     flip_lock.unlock();
 }
 void DebugDraw::add_tri(const Triangle& tri, vec3 color)
@@ -79,15 +84,17 @@ void DebugDraw::add_disc( const Disc& disc, vec3 color /*= vec3(1)*/ )
 {
 	discs[current].push_back(Colored<Disc>(disc, color));
 }
-
 void DebugDraw::draw()
 {
 	flip_lock.lock();
 	int i = (current + 1) % 2;
+	
 	for(auto it = rays[i].begin(); it != rays[i].end(); it++) draw_ray(it->object, it->color);
 	for(auto it = spheres[i].begin(); it != spheres[i].end(); it++) draw_sphere(it->object, it->color);
 	for(auto it = discs[i].begin(); it != discs[i].end(); it++) draw_disc(it->object, it->color);
-	for(auto it = triangles[i].begin(); it != triangles[i].end(); it++) draw_tri(it->object, it->color);
+	for(auto it = aabbs[i].begin(); it != aabbs[i].end(); it++) draw_aabb(it->object, it->color);
+	
+	for(auto it = triangles[i].begin(); it != triangles[i].end(); it++)	draw_tri(it->object, it->color);
     flip_lock.unlock();
 }
 
@@ -110,9 +117,10 @@ void DebugDraw::draw_tri(const Triangle& tri, vec3 color)
 {
 	bool wireframe = true;
 	vec3 center = (tri.vertices[0].position + tri.vertices[1].position + tri.vertices[2].position) / vec3(3);
-	vec3 normal_p = center + tri.normal;
+	vec3 normal_p = center + tri.normal / vec3(20);
 	if(!wireframe)
 	{
+		glLineWidth(2); GLE;
 		glBegin(GL_TRIANGLES);
 		{
 			glColor4f(color.x, color.y, color.z, 1);
@@ -123,42 +131,44 @@ void DebugDraw::draw_tri(const Triangle& tri, vec3 color)
 			i = 2;
 			glVertex4f(tri.vertices[i].position.x, tri.vertices[i].position.y, tri.vertices[i].position.z, 1);
 		}
-		glEnd();
+		glEnd(); GLE;
 	}
 	else
 	{
 		
+		glLineWidth(2); GLE;
 		glBegin(GL_LINES);
 		{
-			glColor4f(color.x, color.y, color.z, 1);
-			int i = 0;
-			glVertex4f(tri.vertices[i].position.x, tri.vertices[i].position.y, tri.vertices[i].position.z, 1);
-			glVertex4f(tri.vertices[i+1].position.x, tri.vertices[i+1].position.y, tri.vertices[i+1].position.z, 1);
-			i = 1;
-			glVertex4f(tri.vertices[i].position.x, tri.vertices[i].position.y, tri.vertices[i].position.z, 1);
-			glVertex4f(tri.vertices[i+1].position.x, tri.vertices[i+1].position.y, tri.vertices[i+1].position.z, 1);
-			i = 2;
-			glVertex4f(tri.vertices[i].position.x, tri.vertices[i].position.y, tri.vertices[i].position.z, 1);
-			glVertex4f(tri.vertices[0].position.x, tri.vertices[0].position.y, tri.vertices[0].position.z, 1);
+			//cout << "addr " << tri.vertices + 0 << ", " << tri.vertices + 1 << ", " << tri.vertices + 2 << endl;
+			glColor4f(1, 0, 0, 1);
+
+			for(int i = 0; i < 3; i++)
+			{
+				glVertex4f(tri.vertices[i].position.x, tri.vertices[i].position.y, tri.vertices[i].position.z, 1);
+				glVertex4f(tri.vertices[(i+1)%3].position.x, tri.vertices[(i+1)%3].position.y, tri.vertices[(i+1)%3].position.z, 1);
+			}
+
 		}
-		glEnd();
+		glEnd(); GLE;
 	}
+	
 	glBegin(GL_LINES);
 	{
-		glColor4f(1, 0, 0, 1);
+		glColor4f(1, 0, 1, 1);
 		glVertex4f(center.x, center.y, center.z, 1);
 		glVertex4f(normal_p.x, normal_p.y, normal_p.z, 1);
-		glColor4f(1, 1, 1, 1);
 	}
-	glEnd();
-
+	glEnd(); GLE;
+	
+	
+		glColor4f(1, 1, 1, 1);
 }
 
 void DebugDraw::draw_sphere( const Sphere& sphere, vec3 color /*= vec3(1)*/ )
 {
 	glMatrixMode(GL_MODELVIEW); GLE;
 	glPushMatrix(); GLE;
-	glColor4f(color.x, color.y, color.z, .08);
+	glColor4f(color.x, color.y, color.z, 1);
 	glTranslatef(sphere.center.x, sphere.center.y, sphere.center.z); GLE;
 	gluSphere(quad, sphere.radius, 32, 32); GLE;
 	glPopMatrix(); GLE;

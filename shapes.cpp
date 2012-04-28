@@ -1,5 +1,12 @@
+#include "pch.h"
 #include "shapes.h"
 #include "rendering.h"
+
+#include <glm/ext.hpp>
+vec3 Ray::at(float t) const
+{
+	return origin + dir * vec3(t);
+}
 void Ray::intersect_with_discs(const Disc* discs, const int num_discs, Intersection* intersections) const
 {
 	for(int i = 0; i < num_discs; i++)
@@ -96,7 +103,6 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
 					intersections[i].t = barypos.z;
 					intersections[i].normal = triangles[i].normal;
 
-					assert(dot(-ray_d, triangles[i].normal) > 0);
 				}
 			}
 			else
@@ -120,10 +126,49 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
 					intersections[i].t = barypos.z;
 					intersections[i].normal = triangles[i].normal;
 
-					assert(dot(-ray_d, triangles[i].normal) > 0);
 				}
 			}
             
         }
+		if(intersections[i].hit) assert(dot(intersections[i].normal, (flip_ray ? dir: -dir)) > 0);
 	}
 }
+
+bool Ray::intersect_with_aabb(const AABB& aabb, float* t, float* t_max_out) const
+{
+	//? = min_pt.?, max_pt.?
+	float t_mins[] = {-INF, -INF, -INF};
+	float t_maxs[] = {INF, INF, INF};
+	
+	vec3 inv_ray_d = vec3(1) / (vec3(glm::equal(dir, vec3(0))) * vec3(1) + dir);
+	for(int i = 0; i < 3; i++)
+	{
+		if(dir[i] != 0)
+		{
+			float t0 = (aabb.min_pt[i] - origin[i]) * inv_ray_d[i];
+			float t1 = (aabb.max_pt[i] - origin[i]) * inv_ray_d[i];
+			t_mins[i] = glm::min(t0, t1);
+			t_maxs[i] = glm::max(t0, t1);
+		}
+		else
+		{
+			//if a component has no direction
+			//make sure the origin is inside the two bounds
+			if(origin[i] >= aabb.min_pt[i] && origin[i] <= aabb.max_pt[i])
+			{
+				t_mins[i] = -INF;
+				t_maxs[i] = INF;
+			}
+			else
+			{
+				return false;
+			}
+		}
+	}
+	float t_min = glm::max(t_mins[0], t_mins[1], t_mins[2]);
+	float t_max = glm::min(t_maxs[0], t_maxs[1], t_maxs[2]);
+	*t = glm::max(t_min, 0.f);
+	*t_max_out = t_max;
+	return t_min < t_max;
+
+} 

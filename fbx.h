@@ -2,7 +2,6 @@
 #include <memory>
 #include <vector>
 #include <list>
-#include <glm/glm.hpp>
 #include "scene.h"
 using namespace glm;
 using namespace std;
