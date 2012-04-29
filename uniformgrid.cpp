@@ -163,7 +163,7 @@ bool UniformGrid::intersect(const Ray& ray, Intersection* intersection, bool fli
 
 			//no hit -> closest_t = INF
 			//this code fails if voxel_max_t is infinitely large...
-			if(tri_hit)
+			if(tri_hit && closest_intersection.t < voxel_max_t)
 			{				
 				//assert(voxel_max_t > ibuffer[intersection_id].t);
 				*intersection = closest_intersection;

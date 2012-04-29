@@ -65,6 +65,30 @@ struct Fresnel
 		return 1000000;
 	}
 };
+struct PerfectSpecular
+{
+	//generate random directions + weight (brdf * cos) / p
+	void sample(const vec3& wo, const vec2& rand, vec3* wi, vec3* weight) const
+	{
+		*wi = reflect(-wo, vec3(0, 0, 1));
+		lwassert_greater(wi->z, 0);
+		// TODO: not implemented
+		lwassert(0); 
+	}
+
+	//get the prob. for a particular direction
+	float pdf(const vec3& wi, const vec3& wo) const
+	{
+		return 0.f;
+	}
+
+	//evaluate the pdf
+	vec3 eval(const vec3& wi, const vec3& wo) const
+	{
+		return vec3(0);
+	}
+	//everything is z-up
+};
 struct BlinnPhongBrdf
 {
 	BlinnPhongBrdf() : f0(0.02), spec_power(10) { }

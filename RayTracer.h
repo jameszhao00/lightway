@@ -25,10 +25,11 @@ struct Light
 };
 struct RectangularAreaLight
 {
-    RectangularAreaLight() : color(1) { }
+    RectangularAreaLight() : normal(0), material(nullptr) { }
     vec3 corners[4];
     vec3 normal;
-    vec3 color;
+    //vec3 color;
+	const Material *material;
     vec3 sample_pt(Rand& rand) const
     {
         float r0 = rand.norm_unif_rand(rand.gen);
@@ -47,6 +48,32 @@ struct RectangularAreaLight
     {
         return length(corners[0] - corners[3]) * length(corners[1] - corners[2]);
     }
+	bool intersect(const Ray& ray, Intersection* intersection, bool flip_ray) const
+	{
+		//normally, ray and normal's directions have to be opposite
+		if(dot(vec3(flip_ray ? -1 : 1) * ray.dir, normal) > 0) return false;
+		float rdotn = dot(ray.dir, normal);
+		if(rdotn == 0) return false;
+
+		float d = dot(corners[0] - ray.origin, normal) / rdotn;
+		vec3 pt = ray.at(d);
+		if(dot(normalize(pt - corners[0]), normalize(corners[1] - corners[0])) < 0) return false;
+		if(dot(normalize(pt - corners[1]), normalize(corners[2] - corners[1])) < 0) return false;
+		if(dot(normalize(pt - corners[2]), normalize(corners[3] - corners[2])) < 0) return false;
+		if(dot(normalize(pt - corners[3]), normalize(corners[0] - corners[3])) < 0) return false;
+
+		intersection->hit = true;
+		intersection->material = material;
+		intersection->normal = normal;
+		intersection->position = pt;
+		intersection->t = d;
+		return true;
+	} 
+	//not used
+	bool is_valid()
+	{
+		return material != nullptr && normal != vec3(0);
+	}
 };
 struct RTScene
 {
@@ -76,18 +103,27 @@ struct RTScene
 		lights[0].color = vec3(1);
 		float offsetX = -24;
 		float offsetZ = -20;
+		/*
 		vec3 light_verts[] = {
 			vec3(343.f/555*48+offsetX, 39.5, 227.f/555*48+offsetZ),		
 			vec3(343.f/555*48+offsetX, 39.5, 332.f/555*48+offsetZ),
 			vec3(213.f/555*48+offsetX, 39.5, 332.f/555*48+offsetZ),	
 			vec3(213.f/555*48+offsetX, 39.5, 227.f/555*48+offsetZ)
+		};*/
+		
+		vec3 light_verts[] = {
+			vec3(-1, 4, -1),
+			vec3(-1, 4, 1),
+			vec3(1, 4, 1),
+			vec3(1, 4, -1)
 		};
         area_lights[0].corners[0] = light_verts[0];//vec3(-1, 39.5, -1);
         area_lights[0].corners[1] = light_verts[1];//vec3(1, 39.5, -1);
         area_lights[0].corners[2] = light_verts[2];//vec3(1, 39.5, 1);
         area_lights[0].corners[3] = light_verts[3];//vec3(-1, 39.5, 1);
         area_lights[0].normal = vec3(0, -1, 0);
-        area_lights[0].color = vec3(.05);
+		light_material.emission = vec3(5);
+		area_lights[0].material = &light_material;
 
 		triangles.push_back(Triangle(
 			vec3(-1, .2, -1),
@@ -100,8 +136,9 @@ struct RTScene
 	}
 	void make_accl()
 	{		
-		accl = make_uniform_grid(*(this->scene), ivec3(130));
+		accl = make_uniform_grid(*(this->scene), ivec3(20));
 	}
+	Material light_material;
 	TwBar *bar;
 	void init_tweaks();
     RectangularAreaLight area_lights[num_area_lights];

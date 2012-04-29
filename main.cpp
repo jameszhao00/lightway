@@ -311,8 +311,11 @@ int main(int argc, char* argv[])
 	lwassert_validvec(vec3(-10, 10, 0));
 	test_uniform_grid();
 	//auto scene = load_scene("assets/conference/conference.obj", vec3(0, 0, 0), 1);
-	auto scene = load_scene("assets/sponza.obj", vec3(0, 0, 0), 1);
+	//auto scene = load_scene("assets/sponza.obj", vec3(0, 0, 0), 1);
 	//auto scene = load_scene("assets/bunny.obj", vec3(0, 0, 0), 10);
+	auto scene = load_scene("assets/scene.obj", vec3(0, 0, 0), .10);
+	//auto scene = load_scene("assets/SkullCycles.blend", vec3(0, 0, 0), .10);
+	
 	cout << "tri count : " << scene->triangles.size() << endl;
     Program prog;
 	prog.rt.scene.scene = scene.get();

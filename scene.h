@@ -17,6 +17,7 @@ struct Material
 	LambertBrdf lambert;
 	BlinnPhongBrdf phong;
 	Btdf refraction;	
+	vec3 emission;
 };
 struct Triangle
 {

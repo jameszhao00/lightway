@@ -1,10 +1,22 @@
 TODO:
 
+- Shadow rays aren't tested vs back-facing polys (i.e. set the light to be above the cornell box.)
+
+- Implement perfect specular reflection/transmission
+
+- Look at specular reflections (PBRT doesn't sample specular with direct light) 
+
 - Room is warped ??
 
 - Maybe integrate FastFormat
 
+- Figure out a way to do rotation to shading axis (z up) without testing for <0,0,1> and <0,0,-1>
+
 DONE:
+
+- Jagged edges when using uniformgrid (any acceleration structure)
+	caused by using intersections outside the voxel (t > min(t_max.x, t_max.y, t_max.z))
+
 - Check for NAN/INF in the render code
 	lots of floating point errors... 
 

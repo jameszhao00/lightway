@@ -6,28 +6,31 @@
 #include <glm/ext.hpp>
 #include <iostream>
 //returns -1 if doesn't intersect
-/*
-int closest_intersect_ray_scene(const RTScene& scene, const Ray& ray, Intersection* intersection_buffer, int buffer_size, bool flip_triangle_dir)
+
+bool closest_intersect_ray_scene(const RTScene& scene, const Ray& ray, Intersection* intersection, bool flip_ray, bool verbose)
 {
-	
-	int num_intersections_used = 0;
-	ray.intersect_with_spheres(scene.spheres, num_spheres, &intersection_buffer[num_intersections_used]);
-	num_intersections_used += num_spheres;
-	ray.intersect_with_discs(scene.discs, num_discs, &intersection_buffer[num_intersections_used]);
-	num_intersections_used += num_discs;
-	ray.intersect_with_triangles(scene.triangles.data(), scene.triangles.size(), &intersection_buffer[num_intersections_used], flip_triangle_dir);	
-	num_intersections_used += scene.triangles.size();
+	Intersection scene_intersection;
+	bool scene_hit = scene.accl->intersect(ray, &scene_intersection, flip_ray, verbose);
 
-	ray.intersect_with_triangles(scene.scene->triangles.data(), scene.scene->triangles.size(), 
-		&intersection_buffer[num_intersections_used], flip_triangle_dir);
-	num_intersections_used += scene.scene->triangles.size();
-
-	assert(num_intersections_used < buffer_size);
-    return closest_intersection(intersection_buffer, num_intersections_used);
-	
-	int hit_i = scene.accl->intersect(ray, intersection_buffer, buffer_size, flip_triangle_dir);
-	return hit_i;
-}*/
+	Intersection light_intersection;
+	bool light_hit = scene.area_lights[0].intersect(ray, &light_intersection, flip_ray);
+	if(scene_hit && light_hit)
+	{
+		*intersection = scene_intersection.t < light_intersection.t ? scene_intersection : light_intersection;
+		return true;
+	}
+	else if(scene_hit)
+	{
+		*intersection = scene_intersection;
+		return true;
+	}
+	else if(light_hit)
+	{
+		*intersection = light_intersection;
+		return true;
+	}
+	return false;
+}
 const int RANDOM_TERMINATION_DEPTH = 2;
 const int MAX_DEPTH = 4;
 
@@ -70,7 +73,8 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 		//trace the ray and find an intersection
 		Intersection closest;
 		closest.normal = vec3(-100, 100, 100);
-		bool hit = scene.accl->intersect(sample->ray, &closest, false, debug);
+		//bool hit = scene.accl->intersect(sample->ray, &closest, false, debug);
+		bool hit = closest_intersect_ray_scene(scene, sample->ray, &closest, false, debug);
 			//closest_intersect_ray_scene(scene, sample->ray, i_buffer, ibuffer_size, false);
 		if(!hit)
 		{
@@ -78,7 +82,11 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 			sample->finished = true;
 			continue;
 		}
-		
+		if(sample->depth == 0)
+		{
+			//no need to mul. by throughput (it's always 1)
+			sample->radiance += closest.material->emission;
+		}
 		//Intersection closest = i_buffer[closest_i];
 		/*
 		if(dot(-sample->ray.dir, closest.normal) <= 0)
@@ -98,7 +106,7 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 				bool visibility = !hit;
 				lwassert_validvec(-sample->ray.dir);
 				vec3 direct = (closest.material->lambert.eval() + closest.material->phong.eval(-light_dir, -sample->ray.dir)) * 
-					saturate(dot(closest.normal, light_dir)) * vec3(visibility) * scene.area_lights[0].color;
+					saturate(dot(closest.normal, light_dir)) * vec3(visibility) * scene.area_lights[0].material->emission;
 				direct /= scene.area_lights[0].pdf();
 				sample->radiance += sample->throughput * direct;
 			}
@@ -251,11 +259,11 @@ int RayTracer::raytrace(DebugDraw& dd, int total_groups, int my_group, int group
 
 				sample->ray = ray;
 			}
+			
 			if(0)//debug)
 			{
 				if(sample->depth == 0)
 				{
-					dd.flip();
 					//test full traversal
 					Ray ray = sample->ray;//Ray ray(vec3(0, 1,5), normalize(vec3(-0.20645134,-0.14003338,-0.96838450 )));
 					dd.add_ray(ray);
@@ -300,6 +308,7 @@ int RayTracer::raytrace(DebugDraw& dd, int total_groups, int my_group, int group
 								dd.add_aabb(scene.accl->cell_bound(ivec3(i, j, k)));
 							}
 					
+					dd.flip();
 				}
 			}
 			//while(!sample->finished)
@@ -310,7 +319,6 @@ int RayTracer::raytrace(DebugDraw& dd, int total_groups, int my_group, int group
 			
 		}
 	}
-	dd.flip();
     return samples_n;
 }
 
