@@ -1,6 +1,5 @@
 #pragma once
 #include <boost/multi_array.hpp>
-#include <boost/array.hpp>
 #include "math.h"
 #include "scene.h"
 #include "shapes.h"
@@ -19,8 +18,8 @@ struct Voxel
 		
 		if(content.size() > 0)
 		{
-			count = content.size();
-			data = new Triangle[count];
+			count = (int)content.size();
+			data = new Triangle[(size_t)count];
 			for(int i = 0; i < count; i++)
 			{
 				data[i] = content[i];
@@ -52,7 +51,7 @@ class UniformGrid
 public:
 	UniformGrid(ivec3 subdivisions, const AABB& p_aabb);
 	~UniformGrid();
-	int intersect(const Ray& ray, Intersection* ibuffer, int ibuffer_size, bool flip_ray, bool verbose = false) const;
+	bool intersect(const Ray& ray, Intersection* intersection, bool flip_ray, bool verbose = false) const;
 	Voxel* cell(ivec3 cellid) const;
 	void cell_bound(const ivec3& cellid, vec3* cell_min_pt, vec3* cell_max_pt) const;
 	AABB cell_bound(const ivec3& cellid) const;
@@ -63,6 +62,7 @@ public:
 		cell_bound(cellid, &result, &dummy);
 		return result;
 	}
+
 	const ivec3 subdivisions;
 	const AABB aabb;
 	const vec3 cell_dim;
@@ -70,5 +70,6 @@ public:
 	inline bool dda_next(const vec3& t_delta, const vec3& step, const ivec3& outcell,  vec3* t_max, ivec3* cellid, float* debug = nullptr) const;
 	//not stack allocated due to boost bug...
 	boost::multi_array<Voxel, 3>* data;
+
 };
 unique_ptr<UniformGrid> make_uniform_grid(const StaticScene& scene, ivec3 subdivisions);

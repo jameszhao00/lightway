@@ -21,13 +21,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v100</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v100</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -43,13 +43,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\zhaoz3\Downloads\boost_1_49_0\boost_1_49_0;$(ProjectDir)/ref/include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)/ref/lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\zhaoz3\Downloads\boost_1_49_0;$(ProjectDir)/ref/include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\zhaoz3\Downloads\boost_1_49_0\stage\lib;$(ProjectDir)/ref/lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\zhaoz3\Downloads\boost_1_49_0\boost_1_49_0;$(ProjectDir)/ref/include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)/ref/lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\zhaoz3\Downloads\boost_1_49_0;$(ProjectDir)/ref/include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\zhaoz3\Downloads\boost_1_49_0\stage\lib;$(ProjectDir)/ref/lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -70,15 +70,18 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LWFAST;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FloatingPointModel>Fast</FloatingPointModel>
       <FloatingPointExceptions>false</FloatingPointExceptions>
-      <ExceptionHandling>false</ExceptionHandling>
+      <ExceptionHandling>SyncCThrow</ExceptionHandling>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -92,6 +95,7 @@
     <ClInclude Include="asset.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="bxdf.h" />
+    <ClInclude Include="debugutils.h" />
     <ClInclude Include="fbx.h" />
     <ClInclude Include="test.h" />
     <ClInclude Include="math.h" />

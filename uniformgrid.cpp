@@ -4,13 +4,6 @@
 #include "math.h"
 #include "rendering.h"
 #include <glm/ext.hpp>
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/geometries.hpp>
-#include <boost/geometry/geometries/adapted/c_array.hpp>
-#include <boost/geometry/multi/geometries/multi_point.hpp>
-
-namespace bg = boost::geometry;
-typedef bg::model::point<double, 3, boost::geometry::cs::cartesian> Point;
 
 UniformGrid::UniformGrid(ivec3 p_subdivisions, const AABB& p_aabb)
 	: subdivisions(p_subdivisions), 
@@ -96,6 +89,8 @@ bool UniformGrid::dda_next(const vec3& t_delta, const vec3& step, const ivec3& o
 			target_t_max.z += t_delta.z;
 		}
 	}
+	// TODO : do this and finish
+	// HACK 
 	else
 	{
 		//y or z smallest
@@ -121,15 +116,14 @@ bool UniformGrid::dda_next(const vec3& t_delta, const vec3& step, const ivec3& o
 	*t_max = target_t_max;
 	return true;
 }
-int UniformGrid::intersect(const Ray& ray, Intersection* ibuffer, int ibuffer_size, bool flip_ray, bool verbose) const
+const float MIN_INTERSECTION_T = 0.000001f;
+bool UniformGrid::intersect(const Ray& ray, Intersection* intersection, bool flip_ray, bool verbose) const
 {
 	vec3 t_delta, step, t_max;
 	ivec3 cellid;
 	ivec3 outcell;
 	bool hit = dda_vals(ray, &t_delta, &step, &t_max, &cellid, &outcell);
-	if(!hit) return -1;
-	vec3 t_max_prev, initial_t_max = t_max;
-	ivec3 cellid_prev, initial_cellid = cellid;
+	if(!hit) return false;
 	float dummy;
 	do
 	{
@@ -137,44 +131,49 @@ int UniformGrid::intersect(const Ray& ray, Intersection* ibuffer, int ibuffer_si
 		if(glm::any(glm::lessThan(cellid, ivec3(0, 0, 0))) || glm::any(glm::greaterThanEqual(cellid, subdivisions)))
 		{
 			cout << "cell id = " << cellid << "outcell = " << outcell << " t = " << dummy << endl;
+			lwassert(false);
 		}
-		//if(verbose) 
-		//	cout << "uniformgrid::intersect testing cell " << cellid.x << ", " << cellid.y << ", " << cellid.z;
 		Voxel* voxel = cell(cellid);
 		const Triangle* tris = voxel->data;
 		if(tris != nullptr)
 		{			
-			ray.intersect_with_triangles(tris, voxel->count, ibuffer, flip_ray);
-			if(verbose)
+			//we're not using closest_t for comparison
+			//because t_max can return close to inf values
+			//when we're really close
+			bool tri_hit = false;
+			Intersection closest_intersection;
+			closest_intersection.t = FLT_MAX;
+			for(int tri_i = 0; tri_i < voxel->count; tri_i++)
 			{
-			bool anyhit = false;
-				for(int i = 0; i < voxel->count; i++)
+				Intersection tri_intersection;
+				ray.intersect_with_triangles(&tris[tri_i], 1, &tri_intersection, flip_ray);
+				//MIN_INTERSECTION_T is for numerical instabilitiies when we're really close
+				if(tri_intersection.hit && tri_intersection.t < closest_intersection.t && (tri_intersection.t > MIN_INTERSECTION_T))
 				{
-					anyhit = ibuffer[i].hit || anyhit;
+					
+		lwassert_notequal(tri_intersection.normal, vec3(0));
+					tri_hit = true;
+					closest_intersection = tri_intersection;
+					lwassert_notequal(tri_intersection.normal, vec3(0));
 				}
-				//cout << "anyhit (" << ray.dir.x << "): " << anyhit << " of " << voxel->count << endl;
-
 			}
 			
 			//min(tmax.x, .y, .z) = prevent us from covering tris in the next voxels
 			float voxel_max_t = glm::min(t_max.x, t_max.y, t_max.z);
-			int intersection_id = closest_intersection(ibuffer, voxel->count, voxel_max_t);
-			if(intersection_id != -1)
-			{
-				
-				//if(verbose) cout << "uniformgrid::intersect finished with " << intersection_id << endl;
-				assert(voxel_max_t > ibuffer[intersection_id].t);
-				//if(verbose) cout << "intersect terminated voxel actual t : " << ibuffer[intersection_id].t << " max t : " << voxel_max_t << endl;
-				return intersection_id;
+
+			//no hit -> closest_t = INF
+			//this code fails if voxel_max_t is infinitely large...
+			if(tri_hit)
+			{				
+				//assert(voxel_max_t > ibuffer[intersection_id].t);
+				*intersection = closest_intersection;
+		lwassert_notequal(closest_intersection.normal, vec3(0));
+				return true;
 			}
 		}
-		//if(verbose) cout << "with " << voxel->count << " tris" << endl;
-		t_max_prev = t_max;
-		cellid_prev = cellid;
 	} while (dda_next(t_delta, step, outcell, &t_max, &cellid, &dummy));
 	
-	//if(verbose) cout << "uniformgrid::intersect finished with -1" << endl;
-	return -1;
+	return false;
 }
 Voxel* UniformGrid::cell(ivec3 cellid) const
 {
@@ -200,7 +199,7 @@ ivec3 UniformGrid::cellid_of(const vec3& coord) const
 unique_ptr<UniformGrid> make_uniform_grid(const StaticScene& scene, ivec3 subdivisions)
 {
 	vec3 min_pt(10000000), max_pt(-10000000);
-	for(auto tri_i = 0; tri_i < scene.triangles.size(); tri_i++)
+	for(size_t tri_i = 0; tri_i < scene.triangles.size(); tri_i++)
 	{		
 		const Triangle& tri = scene.triangles[tri_i];
 		for(auto vert_i = 0; vert_i < 3; vert_i++)
@@ -212,16 +211,14 @@ unique_ptr<UniformGrid> make_uniform_grid(const StaticScene& scene, ivec3 subdiv
 	}
 	AABB aabb(min_pt - vec3(0.1), max_pt + vec3(0.1));
 	unique_ptr<UniformGrid> ug(new UniformGrid(subdivisions, aabb));
-	
-	typedef bg::model::ring<Point> Ring;
-	
+		
 	boost::multi_array<vector<Triangle>, 3> temp(boost::extents[subdivisions.x][subdivisions.y][subdivisions.z]);
 	for(int x = 0; x < subdivisions.x; x++)
 		for(int y = 0; y < subdivisions.y; y++)
 			for(int z = 0; z < subdivisions.z; z++)
 				temp[x][y][z] = vector<Triangle>();
 
-	for(auto tri_i = 0; tri_i < scene.triangles.size(); tri_i++)
+	for(size_t tri_i = 0; tri_i < scene.triangles.size(); tri_i++)
 	{		
 		//Ring tri;
 		auto verts = scene.triangles[tri_i].vertices;

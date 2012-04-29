@@ -5,8 +5,8 @@
 #include <gl/glfw.h>
 #include "RayTracer.h"
 #include "debug.h"
-#include <thread>
-#include <chrono>
+#include <boost/thread.hpp>
+#include <boost/chrono.hpp>
 #include <functional>
 #define GLFW_CDECL
 #include <AntTweakBar.h>
@@ -50,7 +50,7 @@ public:
     	
         running = false;
         
-        hw_conc = thread::hardware_concurrency() - 1;
+        hw_conc = boost::thread::hardware_concurrency() - 1;
 		int r = TwInit(TW_OPENGL, NULL);
 
 		
@@ -210,7 +210,7 @@ public:
         for(int i = 0; i < hw_conc; i++)
         {         
             dd[i].init();
-            raytrace_threads[i] = thread(&Program::raytrace_loop, this, hw_conc, i);   
+            raytrace_threads[i] = boost::thread(&Program::raytrace_loop, this, hw_conc, i);   
         }
     	while(running)
     	{
@@ -258,7 +258,7 @@ public:
     {
 		int i = 1;
         int frame = 0;
-		auto start = chrono::high_resolution_clock::now();
+		auto start = boost::chrono::high_resolution_clock::now();
 		int samples_n = 0;
 		int max_samples = 10;
         while(running)
@@ -271,8 +271,8 @@ public:
 			samples_n += rt.raytrace(dd[my_group], total_groups, my_group, hw_conc, clear);
 			if(i % 10 == 0)
 			{				
-				auto end = chrono::high_resolution_clock::now();
-				double ratio = (double)chrono::high_resolution_clock::period::num /  chrono::high_resolution_clock::period::den;
+				auto end = boost::chrono::high_resolution_clock::now();
+				double ratio = (double)boost::chrono::high_resolution_clock::period::num /  boost::chrono::high_resolution_clock::period::den;
 				double s =  ((end - start) * ratio).count();
                 double samples_per_sec = samples_n / s;
                 ksamples_per_sec[my_group] = (float)samples_per_sec / 1000.0f;
@@ -295,7 +295,7 @@ public:
     bool clear_flag[32];
     int hw_conc;
 	float ksamples_per_sec[32];
-    thread raytrace_threads[32];
+    boost::thread raytrace_threads[32];
     bool running;
 	GLuint texture;
 	RayTracer rt;
@@ -305,16 +305,23 @@ public:
 };
 #include "asset.h"
 #include "test_uniformgrid.h"
+#include "debugutils.h"
 int main(int argc, char* argv[])
 {
+	lwassert_validvec(vec3(-10, 10, 0));
 	test_uniform_grid();
-	auto scene = load_scene("assets/bunny.obj", vec3(0, 0, 0), 10);
+	//auto scene = load_scene("assets/conference/conference.obj", vec3(0, 0, 0), 1);
+	auto scene = load_scene("assets/sponza.obj", vec3(0, 0, 0), 1);
+	//auto scene = load_scene("assets/bunny.obj", vec3(0, 0, 0), 10);
+	cout << "tri count : " << scene->triangles.size() << endl;
     Program prog;
 	prog.rt.scene.scene = scene.get();
+	/*
 	for(int tri_i = 0; tri_i < scene->triangles.size(); tri_i++)
 	{			
 		scene->triangles[tri_i].material = prog.rt.scene.spheres[0].material;
 	}
+	*/
 	prog.rt.scene.make_accl();
     prog.init();
     prog.main_loop();

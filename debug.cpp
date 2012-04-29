@@ -95,6 +95,8 @@ void DebugDraw::draw()
 	for(auto it = aabbs[i].begin(); it != aabbs[i].end(); it++) draw_aabb(it->object, it->color);
 	
 	for(auto it = triangles[i].begin(); it != triangles[i].end(); it++)	draw_tri(it->object, it->color);
+	//cout << "drawn " << triangles[i].size() << " tris " << endl;
+	
     flip_lock.unlock();
 }
 

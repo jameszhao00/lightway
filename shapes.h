@@ -8,7 +8,7 @@ struct Disc
 {
     Disc()// : Disc(vec3(DEBUGVAL), vec3(DEBUGVAL), DEBUGVAL, (Material*)DEBUGVAL)
 	{
-		Disc(vec3(DEBUGVAL), vec3(DEBUGVAL), DEBUGVAL, (Material*)DEBUGVAL);
+		this->Disc::Disc(vec3(DEBUGVAL), vec3(DEBUGVAL), DEBUGVAL, (Material*)DEBUGVAL);
 	}
 	Disc(const vec3& c, const vec3& n, float r, const Material* m) 
 	    : center(c), normal(n), radius(r), material(m) { }
@@ -21,7 +21,7 @@ struct Sphere
 {
     Sphere()// : Sphere(vec3(DEBUGVAL), DEBUGVAL, (Material*)DEBUGVAL){ }
 	{
-		Sphere(vec3(DEBUGVAL), DEBUGVAL, (Material*)DEBUGVAL);
+		this->Sphere::Sphere(vec3(DEBUGVAL), DEBUGVAL, (Material*)DEBUGVAL);
 	}
 	Sphere(const vec3& c, const float& r, const Material* m) 
 	    : center(c), radius(r), material(m) { }
@@ -32,7 +32,7 @@ struct Sphere
 struct AABB
 {
 	AABB() { }
-	AABB(const vec3 p_min_pt, const vec3 p_max_pt) 
+	AABB(const vec3& p_min_pt, const vec3& p_max_pt) 
 		: max_pt(p_max_pt), min_pt(p_min_pt), extent(p_max_pt-p_min_pt) { }
 
 	//which side is the touching point on?
@@ -54,7 +54,7 @@ struct Ray
 {
     Ray() //: Ray(vec3(DEBUGVAL), vec3(DEBUGVAL)) { }
 	{
-		Ray(vec3(DEBUGVAL), vec3(DEBUGVAL));
+		this->Ray::Ray(vec3(DEBUGVAL), vec3(DEBUGVAL));
 	}
     Ray(const vec3& o, const vec3& d) : origin(o), dir(d) { }
 	vec3 origin;

@@ -47,4 +47,5 @@ struct StaticScene
 {
 	StaticScene() { }
 	vector<Triangle> triangles;
+	vector<unique_ptr<Material>> materials;
 };

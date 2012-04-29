@@ -130,7 +130,10 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
 			}
             
         }
-		if(intersections[i].hit) assert(dot(intersections[i].normal, (flip_ray ? dir: -dir)) > 0);
+		if(intersections[i].hit)
+		{
+			lwassert_greater(dot(intersections[i].normal, (flip_ray ? dir: -dir)), 0);// > 0);
+		}
 	}
 }
 

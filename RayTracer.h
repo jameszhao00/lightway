@@ -74,13 +74,20 @@ struct RTScene
 
 		lights[0].position = vec3(-4, 10, 0);
 		lights[0].color = vec3(1);
-		
-        area_lights[0].corners[0] = vec3(-1, 2, -1);
-        area_lights[0].corners[1] = vec3(1, 2, -1);
-        area_lights[0].corners[2] = vec3(1, 2, 1);
-        area_lights[0].corners[3] = vec3(-1, 2, 1);
+		float offsetX = -24;
+		float offsetZ = -20;
+		vec3 light_verts[] = {
+			vec3(343.f/555*48+offsetX, 39.5, 227.f/555*48+offsetZ),		
+			vec3(343.f/555*48+offsetX, 39.5, 332.f/555*48+offsetZ),
+			vec3(213.f/555*48+offsetX, 39.5, 332.f/555*48+offsetZ),	
+			vec3(213.f/555*48+offsetX, 39.5, 227.f/555*48+offsetZ)
+		};
+        area_lights[0].corners[0] = light_verts[0];//vec3(-1, 39.5, -1);
+        area_lights[0].corners[1] = light_verts[1];//vec3(1, 39.5, -1);
+        area_lights[0].corners[2] = light_verts[2];//vec3(1, 39.5, 1);
+        area_lights[0].corners[3] = light_verts[3];//vec3(-1, 39.5, 1);
         area_lights[0].normal = vec3(0, -1, 0);
-        area_lights[0].color = vec3(5);
+        area_lights[0].color = vec3(.05);
 
 		triangles.push_back(Triangle(
 			vec3(-1, .2, -1),
@@ -93,7 +100,7 @@ struct RTScene
 	}
 	void make_accl()
 	{		
-		accl = make_uniform_grid(*(this->scene), ivec3(50));
+		accl = make_uniform_grid(*(this->scene), ivec3(130));
 	}
 	TwBar *bar;
 	void init_tweaks();
@@ -142,7 +149,7 @@ public:
 	}
     ~RayTracer() { delete [] fb; }
 	//returns rays count
-	void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, Intersection* i_buffer, int ibuffer_size, bool debug);
+	void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, bool debug);
     int raytrace(DebugDraw& dd, int total_groups, int my_group, int group_n, bool clear_fb);
     void resize(int w, int h);
 	/*

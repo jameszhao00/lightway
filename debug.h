@@ -1,8 +1,8 @@
 #pragma once
 #include <list>
 #include <gl/glfw.h>
-#include <thread>
-#include <mutex>
+#include <boost/thread.hpp>
+//#include <mutex>
 #include "rendering.h"
 #include "shapes.h"
 
@@ -32,7 +32,7 @@ struct Colored
 };
 struct DebugRay : Ray
 {
-    float t;
+	float t;
 };
 inline void glvert(vec3 vert)
 {
@@ -64,16 +64,15 @@ public:
 	list<Colored<Triangle>> triangles[2];
 	list<Colored<AABB>> aabbs[2];
 	int current;
-	
-    mutex flip_lock;
+	boost::mutex flip_lock;
 private:
 	void draw_ray(const DebugRay& ray, vec3 color = vec3(1));
 	void draw_sphere(const Sphere& sphere, vec3 color = vec3(1));
 	void draw_disc(const Disc& sphere, vec3 color = vec3(1));
 	void draw_tri(const Triangle& tri, vec3 color = vec3(1));
 	void draw_aabb(const AABB& aabb, vec3 color = vec3(1))
-	{
-	glLineWidth(1); GLE;
+	{ 
+		glLineWidth(1); GLE;
 		glBegin(GL_LINES);
 		{
 			glColor4f(.2, .2, .2, 1);

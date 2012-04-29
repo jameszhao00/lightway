@@ -31,11 +31,25 @@ unique_ptr<StaticScene> load_scene(string path, vec3 translation, float scale)
 	mat4 t = glm::translate(translation) * glm::scale(vec3(scale));
 	
 	auto error = importer.GetErrorString();
-	assert(ai_scene);
+	lwassert(ai_scene);
 	for(int i = 0; i < ai_scene->mNumMeshes; i++)
 	{
 		auto ai_mesh = ai_scene->mMeshes[i];
 		int faces_n = ai_mesh->mNumFaces;
+		unique_ptr<Material> material(new Material());
+		{
+			aiColor3D diffuse;
+			ai_scene->mMaterials[ai_mesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
+			material->lambert.albedo = vec3(diffuse.r, diffuse.g, diffuse.b);
+			if(glm::any(glm::lessThan(material->lambert.albedo, vec3(0))))
+			{
+				cout << "clamping albedo to 0" << endl;
+				material->lambert.albedo = glm::clamp(material->lambert.albedo, vec3(0), vec3(FLT_MAX));
+			}
+		}
+		material->phong.f0 = vec3(.1);
+		material->phong.spec_power = 10;
+		material->refraction.enabled = false;
 		for(int faces_i = 0; faces_i < faces_n; faces_i++)
 		{
 			Triangle triangle;
@@ -47,10 +61,12 @@ unique_ptr<StaticScene> load_scene(string path, vec3 translation, float scale)
 				triangle.vertices[vert_i].normal = to_glm(ai_mesh->mNormals[index]);
 				triangle.vertices[vert_i].uv = vec2(0);
 			}
-
+			triangle.material = material.get();
 			triangle.compute_normal();
 			scene->triangles.push_back(triangle);
 		}
+		
+		scene->materials.push_back(move(material));
 	}
 	return scene;
 }
