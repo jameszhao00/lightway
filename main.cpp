@@ -247,7 +247,7 @@ public:
             }
             //can average even though rays / group my not be equal (they're very close)
             avg_ksamples_per_sec /= hw_conc;
-            printf("perfstat - %f ksamples / sec\n", avg_ksamples_per_sec);
+            //printf("perfstat - %f ksamples / sec\n", avg_ksamples_per_sec);
     	}
         for(int i = 0; i < hw_conc; i++)
         {
@@ -305,15 +305,30 @@ public:
 };
 #include "asset.h"
 #include "test_uniformgrid.h"
+#include "test.h"
 #include "debugutils.h"
 int main(int argc, char* argv[])
 {
+	
+	test_rectangular_area_lights();
 	lwassert_validvec(vec3(-10, 10, 0));
 	test_uniform_grid();
 	//auto scene = load_scene("assets/conference/conference.obj", vec3(0, 0, 0), 1);
 	//auto scene = load_scene("assets/sponza.obj", vec3(0, 0, 0), 1);
 	//auto scene = load_scene("assets/bunny.obj", vec3(0, 0, 0), 10);
-	auto scene = load_scene("assets/scene.obj", vec3(0, 0, 0), .10);
+	auto scene = load_scene("assets/validation/spec_validation1.lwo", vec3(0, 0, 0), 1);
+	{
+		//test camera
+		Camera camera;
+		camera.eye = vec3(2, 0, 0);
+		camera.ar = 1;
+		camera.forward = vec3(0, 0, 1);
+		camera.fovy = PI / 4;
+		camera.up = vec3(0, 1, 0);
+		camera.zf = 1;
+		camera.zn = 100;
+		scene->cameras.push_back(camera);
+	}
 	//auto scene = load_scene("assets/SkullCycles.blend", vec3(0, 0, 0), .10);
 	
 	cout << "tri count : " << scene->triangles.size() << endl;
@@ -327,6 +342,7 @@ int main(int argc, char* argv[])
 	*/
 	prog.rt.scene.make_accl();
     prog.init();
+	scene->init_tweaks();
     prog.main_loop();
 	return EXIT_SUCCESS;
 }

@@ -22,3 +22,4 @@ bool less3(T a, T b)
 {
 	return a.x < b.x && a.y < b.y && a.z < b.z;
 }
+void test_rectangular_area_lights();

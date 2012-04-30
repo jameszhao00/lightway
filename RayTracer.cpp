@@ -32,20 +32,9 @@ bool closest_intersect_ray_scene(const RTScene& scene, const Ray& ray, Intersect
 	return false;
 }
 const int RANDOM_TERMINATION_DEPTH = 2;
-const int MAX_DEPTH = 4;
+const int MAX_DEPTH = 8;
 
-void RTScene::init_tweaks()
-{		 
-	bar = TwNewBar("Material");
-	TwAddVarRW(bar, "Ball Albedo", TW_TYPE_COLOR3F, value_ptr(materials[0].lambert.albedo), "");
-	TwAddVarRW(bar, "Ball Roughness", TW_TYPE_FLOAT, &materials[0].phong.spec_power, "");
-	TwAddVarRW(bar, "Ball Specular", TW_TYPE_COLOR3F, value_ptr(materials[0].phong.f0), "");
-		
-	TwAddVarRW(bar, "Ball2 Albedo", TW_TYPE_COLOR3F, value_ptr(materials[2].lambert.albedo), "");
-	TwAddVarRW(bar, "Ball2 Roughness", TW_TYPE_FLOAT, &materials[2].phong.spec_power, "");
-	TwAddVarRW(bar, "Ball2 Specular", TW_TYPE_COLOR3F, value_ptr(materials[2].phong.f0), "");
-}
-void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, bool debug)
+void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, bool debug, DebugDraw& debug_draw)
 {
 	for(int sample_i = 0; sample_i < sample_n; sample_i++)
 	{
@@ -78,14 +67,15 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 			//closest_intersect_ray_scene(scene, sample->ray, i_buffer, ibuffer_size, false);
 		if(!hit)
 		{
+			if(debug) cout << "debug terminated " << endl;
 			sample->radiance += sample->throughput * background;
 			sample->finished = true;
 			continue;
 		}
-		if(sample->depth == 0)
+		if(sample->depth == 0 || sample->specular_using_brdf)
 		{
-			//no need to mul. by throughput (it's always 1)
-			sample->radiance += closest.material->emission;
+			sample->radiance += sample->throughput * closest.material->emission;
+			//sample->specular_using_brdf = false;
 		}
 		//Intersection closest = i_buffer[closest_i];
 		/*
@@ -96,26 +86,48 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 		*/
 		//update radiance with direct light
 		{
-			vec3 light_dir = normalize(scene.area_lights[0].sample_pt(rand) - closest.position);
-			Ray shadow_ray(closest.position +  light_dir * 0.0001f, light_dir);
-			Intersection dummy;
-			bool hit =  scene.accl->intersect(shadow_ray, &dummy, true, false);
-				//closest_intersect_ray_scene(scene, shadow_ray, i_buffer, ibuffer_size, true);
-			if(!closest.material->refraction.enabled)
-			{
-				bool visibility = !hit;
-				lwassert_validvec(-sample->ray.dir);
-				vec3 direct = (closest.material->lambert.eval() + closest.material->phong.eval(-light_dir, -sample->ray.dir)) * 
-					saturate(dot(closest.normal, light_dir)) * vec3(visibility) * scene.area_lights[0].material->emission;
-				direct /= scene.area_lights[0].pdf();
-				sample->radiance += sample->throughput * direct;
+			//diffuse - sample using light pdf
+			{			
+				vec3 light_pt = scene.area_lights[0].sample_pt(rand);
+				
+				vec3 light_dir = normalize(light_pt - closest.position);
+				float light_t = (light_pt.x - closest.position.x) / light_dir.x;
+				Ray shadow_ray(closest.position +  light_dir * 0.0001f, light_dir);
+				Intersection dummy;
+				bool hit = scene.accl->intersect(shadow_ray, &dummy, true, false);
+					//closest_intersect_ray_scene(scene, shadow_ray,&dummy, true, false);
+				
+				if(debug)
+				{
+					debug_draw.add_ray(shadow_ray, hit ? dummy.t : 10000);
+				}
+				bool light_facing = dot(light_dir, scene.area_lights[0].normal) < 0;
+				
+				//if(!closest.material->refraction.enabled && !hit)
+				if((!hit || (light_t < dummy.t )) && light_facing)
+				{
+					lwassert_validvec(-sample->ray.dir);
+					//visibility is implied
+					vec3 phong = closest.material->phong.eval(-light_dir, -sample->ray.dir);
+					vec3 lambert = closest.material->lambert.eval();
+					vec3 sndotl = vec3(saturate(dot(closest.normal, light_dir) ));
+					//lndotl remembered from radiosity hw
+					vec3 lndotl = vec3(saturate(dot(scene.area_lights[0].normal, -light_dir)));
+					vec3 direct = (lambert + phong) * lndotl * sndotl * scene.area_lights[0].material->emission;
+					direct /= scene.area_lights[0].pdf();
+
+					sample->radiance += sample->throughput * direct;if(debug)
+					{						
+						cout << "debug direct n = " <<  sndotl << endl;
+					}
+				}
+					
 			}
 		}
 		//update ray/throughput with brdf
 		{
 			mat4 rot;
-			//indirect lighting
-			//if(closest.normal.x != 0 || closest.normal.y != 0 || closest.normal.z != 1)
+
 			{
 				//hopefully we can collapse this..
 				if(closest.normal.x == 0 && closest.normal.y == 0 && closest.normal.z == 1)
@@ -156,13 +168,14 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 				lwassert_allge(weight, vec3(0));
 				lwassert(wi_world.length() > 0 || weight.length() == 0);
 				wi_world = vec3(rot * vec4(wi_local, 0));
+				sample->specular_using_brdf = true;
 			}
 			else
 			{
 				vec3 wi_local;
 				closest.material->lambert.sample(vec2(rand.next01(), rand.next01()), &wi_local, &weight);	
 				lwassert_allge(weight, vec3(0));			
-				wi_world = vec3(rot * vec4(wi_local, 0));		
+				wi_world = vec3(rot * vec4(wi_local, 0));
 			}
 		
 			sample->throughput *= weight;
@@ -184,10 +197,15 @@ int RayTracer::raytrace(DebugDraw& dd, int total_groups, int my_group, int group
 	bool flip = false;
 	float zn = 1; float zf = 50;
 	int rays_pp = 1;
-	mat4 inv_view = inverse(camera.view());
-	mat4 inv_proj = inverse(camera.projection());
+	const Camera* active_camera = &camera;
+	if(scene.scene->active_camera_idx != -1)
+	{
+		active_camera = &scene.scene->cameras[scene.scene->active_camera_idx];
+	}
+	mat4 inv_view = inverse(active_camera->view());
+	mat4 inv_proj = inverse(active_camera->projection());
 	//Intersection intersections[2];
-	vec3 o = camera.eye;
+	vec3 o = active_camera->eye;
 	//const int ibuffer_size = 6000;
 	//Intersection i_buffer[ibuffer_size];
 	//for(int i = 0; i < num_spheres; i++) dd.add_sphere(scene.spheres[i], vec3(.1, 0, 0));
@@ -197,7 +215,7 @@ int RayTracer::raytrace(DebugDraw& dd, int total_groups, int my_group, int group
     int i_end = (int)floor((float)(my_group+1)/total_groups * h);
 	if(my_group == 0) 
 	{
-		//for(size_t i = 0; i < scene.scene->triangles.size(); i++) dd.add_tri(scene.scene->triangles[i], vec3(0, 1, 0));
+		for(size_t i = 0; i < scene.scene->triangles.size(); i++) dd.add_tri(scene.scene->triangles[i], vec3(0, 1, 0));
 	}
     
     //printf("thread %d processing from %d to %d\n", my_group, i_start, i_end);
@@ -313,12 +331,13 @@ int RayTracer::raytrace(DebugDraw& dd, int total_groups, int my_group, int group
 			}
 			//while(!sample->finished)
 			{
-				process_samples(scene, rand[my_group], sample, 1, debug && sample->depth == 0);
+				process_samples(scene, rand[my_group], sample, 1, debug, dd);
 			}
 				
 			
 		}
 	}
+	dd.flip();
     return samples_n;
 }
 

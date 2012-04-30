@@ -53,14 +53,16 @@ struct RectangularAreaLight
 		//normally, ray and normal's directions have to be opposite
 		if(dot(vec3(flip_ray ? -1 : 1) * ray.dir, normal) > 0) return false;
 		float rdotn = dot(ray.dir, normal);
-		if(rdotn == 0) return false;
+		const float epsilon = 0.0001f;
+		if(fabs(rdotn) < epsilon) return false;
 
 		float d = dot(corners[0] - ray.origin, normal) / rdotn;
 		vec3 pt = ray.at(d);
-		if(dot(normalize(pt - corners[0]), normalize(corners[1] - corners[0])) < 0) return false;
-		if(dot(normalize(pt - corners[1]), normalize(corners[2] - corners[1])) < 0) return false;
-		if(dot(normalize(pt - corners[2]), normalize(corners[3] - corners[2])) < 0) return false;
-		if(dot(normalize(pt - corners[3]), normalize(corners[0] - corners[3])) < 0) return false;
+		float dp = dot(normalize(pt - corners[3]), normalize(corners[0] - corners[3]));
+		if((dot(normalize(pt - corners[0]), normalize(corners[1] - corners[0]))) < -epsilon) return false;
+		if((dot(normalize(pt - corners[1]), normalize(corners[2] - corners[1]))) < -epsilon) return false;
+		if((dot(normalize(pt - corners[2]), normalize(corners[3] - corners[2]))) < -epsilon) return false;
+		if((dot(normalize(pt - corners[3]), normalize(corners[0] - corners[3]))) < -epsilon) return false;
 
 		intersection->hit = true;
 		intersection->material = material;
@@ -112,10 +114,10 @@ struct RTScene
 		};*/
 		
 		vec3 light_verts[] = {
-			vec3(-1, 4, -1),
-			vec3(-1, 4, 1),
-			vec3(1, 4, 1),
-			vec3(1, 4, -1)
+			vec3(-.25, .35, -.25),
+			vec3(-.25, .35, .25),
+			vec3(.25, .35, .25),
+			vec3(.25, .35, -.25)
 		};
         area_lights[0].corners[0] = light_verts[0];//vec3(-1, 39.5, -1);
         area_lights[0].corners[1] = light_verts[1];//vec3(1, 39.5, -1);
@@ -139,8 +141,6 @@ struct RTScene
 		accl = make_uniform_grid(*(this->scene), ivec3(20));
 	}
 	Material light_material;
-	TwBar *bar;
-	void init_tweaks();
     RectangularAreaLight area_lights[num_area_lights];
 	Sphere spheres[num_spheres];
 	Disc discs[num_discs];
@@ -160,6 +160,7 @@ struct Sample
 	vec3 throughput;
 	vec3 radiance;
 	bool finished;
+	bool specular_using_brdf;
 	int depth;
 	void reset()
 	{
@@ -167,6 +168,7 @@ struct Sample
 		radiance = vec3(0); 
 		throughput = vec3(1);
 		finished = false;
+		specular_using_brdf = false;
 	}
 };
 class RayTracer
@@ -174,11 +176,9 @@ class RayTracer
 public:    
 	void init()
 	{
-		scene.init_tweaks();
 		use_fresnel = true;
-		TwAddVarRW(scene.bar, "Fresnel", TW_TYPE_BOOLCPP, &use_fresnel, "");
 	}
-	RayTracer() : background(135.0f/255, 180.0f/255, 250.0f/255) 
+	RayTracer() : background(0)//135.0f/255, 180.0f/255, 250.0f/255) 
 	{ 
 	    fb = new Color[FB_CAPACITY * FB_CAPACITY]; 
         linear_fb = new vec4[FB_CAPACITY * FB_CAPACITY];
@@ -186,7 +186,7 @@ public:
 	}
     ~RayTracer() { delete [] fb; }
 	//returns rays count
-	void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, bool debug);
+	void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, bool debug, DebugDraw& debug_draw);
     int raytrace(DebugDraw& dd, int total_groups, int my_group, int group_n, bool clear_fb);
     void resize(int w, int h);
 	/*

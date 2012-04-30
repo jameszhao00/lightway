@@ -1,5 +1,7 @@
 TODO:
 
+- understand why we can directly add (throughput * emission) when there's a specular
+
 - Shadow rays aren't tested vs back-facing polys (i.e. set the light to be above the cornell box.)
 
 - Implement perfect specular reflection/transmission
@@ -13,6 +15,8 @@ TODO:
 - Figure out a way to do rotation to shading axis (z up) without testing for <0,0,1> and <0,0,-1>
 
 DONE:
+
+- Fixed shadow ray stuff
 
 - Jagged edges when using uniformgrid (any acceleration structure)
 	caused by using intersections outside the voxel (t > min(t_max.x, t_max.y, t_max.z))
@@ -34,3 +38,6 @@ NOTES:
 
 - watch out when typing vec3 comparison code out. 
 	- don't do n.x == 0 && n.x == 0 && n.x == 0
+
+- be careful with shadow rays 
+	If they do intersect, make sure it's in front of the desired light source

@@ -70,6 +70,7 @@ public:
 	inline bool dda_next(const vec3& t_delta, const vec3& step, const ivec3& outcell,  vec3* t_max, ivec3* cellid, float* debug = nullptr) const;
 	//not stack allocated due to boost bug...
 	boost::multi_array<Voxel, 3>* data;
-
+	//shouldn't really be here...
+	vector<Material*> materials;
 };
 unique_ptr<UniformGrid> make_uniform_grid(const StaticScene& scene, ivec3 subdivisions);

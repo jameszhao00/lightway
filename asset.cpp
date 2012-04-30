@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "asset.h"
 #include "math.h"
+#include "rendering.h"
 #include <glm/ext.hpp>
 #include <assimp/assimp.hpp>  
 #include <assimp/aiScene.h>   
@@ -29,7 +30,22 @@ unique_ptr<StaticScene> load_scene(string path, vec3 translation, float scale)
         aiProcess_SortByPType);
 
 	mat4 t = glm::translate(translation) * glm::scale(vec3(scale));
-	
+	if(ai_scene->HasCameras())
+	{
+		for(int i = 0; i < ai_scene->mNumCameras; i++)
+		{
+			auto ai_camera = ai_scene->mCameras[i];
+			Camera camera;
+			camera.eye = to_glm(ai_camera->mPosition);
+			camera.ar = ai_camera->mAspect;
+			camera.forward = normalize(to_glm(ai_camera->mLookAt));
+			camera.fovy = ai_camera->mHorizontalFOV;
+			camera.up = to_glm(ai_camera->mUp);
+			camera.zf = ai_camera->mClipPlaneFar;
+			camera.zn = ai_camera->mClipPlaneNear;
+			scene->cameras.push_back(camera);
+		}
+	}
 	auto error = importer.GetErrorString();
 	lwassert(ai_scene);
 	for(int i = 0; i < ai_scene->mNumMeshes; i++)
