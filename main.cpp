@@ -310,7 +310,7 @@ public:
 int main(int argc, char* argv[])
 {
 	
-	test_rectangular_area_lights();
+	//test_rectangular_area_lights();
 	lwassert_validvec(vec3(-10, 10, 0));
 	test_uniform_grid();
 	//auto scene = load_scene("assets/conference/conference.obj", vec3(0, 0, 0), 1);

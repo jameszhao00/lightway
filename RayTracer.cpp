@@ -44,7 +44,7 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 			sample->finished = true;
 			continue;
 		}
-		
+		//russian roulette
 		if(sample->depth > RANDOM_TERMINATION_DEPTH)
 		{
 			//green = luminosity
@@ -54,20 +54,14 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 				sample->finished = true;
 				continue;
 			}
-			//make up for the path termination
 			sample->throughput /= survival;
-			//not correct... but okay
-			//sample->throughput = saturate(sample->throughput);
 		}
 		//trace the ray and find an intersection
 		Intersection closest;
-		closest.normal = vec3(-100, 100, 100);
-		//bool hit = scene.accl->intersect(sample->ray, &closest, false, debug);
+		closest.normal = vec3(-100, 100, 100);		
 		bool hit = closest_intersect_ray_scene(scene, sample->ray, &closest, false, debug);
-			//closest_intersect_ray_scene(scene, sample->ray, i_buffer, ibuffer_size, false);
 		if(!hit)
-		{
-			if(debug) cout << "debug terminated " << endl;
+		{			
 			sample->radiance += sample->throughput * background;
 			sample->finished = true;
 			continue;
@@ -75,15 +69,9 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 		if(sample->depth == 0 || sample->specular_using_brdf)
 		{
 			sample->radiance += sample->throughput * closest.material->emission;
-			//sample->specular_using_brdf = false;
+			sample->specular_using_brdf = false;
 		}
-		//Intersection closest = i_buffer[closest_i];
-		/*
-		if(dot(-sample->ray.dir, closest.normal) <= 0)
-		{
-			closest_intersect_ray_scene(scene, sample->ray, i_buffer, ibuffer_size, false);
-		}
-		*/
+
 		//update radiance with direct light
 		{
 			//diffuse - sample using light pdf
@@ -103,12 +91,11 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 				}
 				bool light_facing = dot(light_dir, scene.area_lights[0].normal) < 0;
 				
-				//if(!closest.material->refraction.enabled && !hit)
 				if((!hit || (light_t < dummy.t )) && light_facing)
 				{
 					lwassert_validvec(-sample->ray.dir);
 					//visibility is implied
-					vec3 phong = closest.material->phong.eval(-light_dir, -sample->ray.dir);
+					vec3 phong = vec3(0);//closest.material->phong.eval(-light_dir, -sample->ray.dir);
 					vec3 lambert = closest.material->lambert.eval();
 					vec3 sndotl = vec3(saturate(dot(closest.normal, light_dir) ));
 					//lndotl remembered from radiosity hw
@@ -116,10 +103,7 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 					vec3 direct = (lambert + phong) * lndotl * sndotl * scene.area_lights[0].material->emission;
 					direct /= scene.area_lights[0].pdf();
 
-					sample->radiance += sample->throughput * direct;if(debug)
-					{						
-						cout << "debug direct n = " <<  sndotl << endl;
-					}
+					sample->radiance += sample->throughput * direct;
 				}
 					
 			}
@@ -155,7 +139,7 @@ void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* sample
 			}
 			vec3 wi_world;
 			vec3 weight;
-			bool sample_spec = rand.next01() > 0.5;
+			bool sample_spec = rand.next01() > 0;//0.5;
 			auto ndotv = dot(-sample->ray.dir, closest.normal);
 			if(sample_spec)
 			{
