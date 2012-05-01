@@ -5,6 +5,7 @@
 #include "bxdf.h"
 #include <glm/ext.hpp>
 #include <iostream>
+
 //returns -1 if doesn't intersect
 
 bool closest_intersect_ray_scene(const RTScene& scene, const Ray& ray, Intersection* intersection, bool flip_ray)
@@ -33,170 +34,109 @@ bool closest_intersect_ray_scene(const RTScene& scene, const Ray& ray, Intersect
 }
 const int RANDOM_TERMINATION_DEPTH = 2;
 const int RT_MAX_DEPTH = 8;
-
+void axisConversions(const float3& normal, float3x3* zUpToWorld, float3x3* worldToZUp)
+{
+	//hopefully we can collapse this..
+	if(normal.x == 0 && normal.y == 0 && normal.z == 1)
+	{
+		//do nothing
+	}
+	else if(normal.x == 0 && normal.y == 0 && normal.z == -1)	
+	{
+		float3 rotaxis(0, 1, 0);
+		float rotangle = PI;
+		*zUpToWorld = float3x3(glm::rotate(glm::degrees(rotangle), rotaxis));
+	}
+	else
+	{					
+		float3 rotaxis = cross(float3(0, 0, 1), normal);
+		float rotangle = acos(dot(normal, float3(0, 0, 1)));
+		*zUpToWorld = float3x3(glm::rotate(glm::degrees(rotangle), rotaxis));
+	}
+	*worldToZUp = glm::transpose(*zUpToWorld);	
+}
 void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, SampleDebugger& sd)
 {
-	for(int sample_i = 0; sample_i < sample_n; sample_i++)
+	Sample& sample = samples_array[0];
+	if(sample.depth > RT_MAX_DEPTH) 
 	{
-		Sample* sample = &samples_array[sample_i];
-		if(sample->depth > RT_MAX_DEPTH) 
+		sample.finished = true; 
+		return;
+	}
+	if(sample.depth > RANDOM_TERMINATION_DEPTH)
+	{
+		//green = luminosity
+		float survival = glm::min(0.5f, sample.throughput.g);
+		if(rand.next01() > survival)
 		{
-			sample->finished = true;
-			continue;
+			sample.finished = true;
+			return;
 		}
-		sd.shr.record(sample->xy, sample->depth, "T", sample->throughput);
-		//russian roulette
-		if(sample->depth > RANDOM_TERMINATION_DEPTH)
-		{
-			//green = luminosity
-			float survival = glm::min(0.5f, sample->throughput.g);
-			if(rand.next01() > survival)
-			{
-				sample->finished = true;
-				continue;
-			}
-			sample->throughput /= survival;
-		}
-		sd.shr.record(sample->xy, sample->depth, "T (RR)", sample->throughput);
-		//trace the ray and find an intersection
-		Intersection closest;
-		closest.normal = float3(-100, 100, 100);		
-		bool hit = closest_intersect_ray_scene(scene, sample->ray, &closest, false);
-		if(!hit)
-		{			
-			sample->radiance += sample->throughput * background;
-			sample->finished = true;
-			sd.shr.record(sample->xy, sample->depth, "Missed All Rad", sample->radiance);
-			sd.shr.record(sample->xy, sample->depth, "Missed All", float3(1));
-			continue;
-		}
-		sd.shr.record(sample->xy, sample->depth, "Hit Normal", closest.normal);
-		sd.shr.record(sample->xy, sample->depth, "Hit Pos", closest.position);
-		sd.shr.record(sample->xy, sample->depth, "Hit t", float3(closest.t));
-		if(sample->depth == 0 || sample->specular_using_brdf)
-		{
-			sd.shr.record(sample->xy, sample->depth, "SpecEmission", sample->throughput * closest.material->emission);
-			sample->radiance += sample->throughput * closest.material->emission;
-			sample->specular_using_brdf = false;
-		}
-
-		//update radiance with direct light
-		{
-			//diffuse - sample using light pdf
-			{			
-				float3 light_pt = scene.area_lights[0].sample_pt(rand);
-				sd.shr.record(sample->xy, sample->depth, "LightPos", light_pt);
-				
-				float3 light_dir = normalize(light_pt - closest.position);
-				float light_t = (light_pt.x - closest.position.x) / light_dir.x;
-				Ray shadow_ray(closest.position +  light_dir * 0.001f, light_dir);
-				Intersection dummy;
-				bool hit = scene.accl->intersect(shadow_ray, &dummy, true, false);
-
-				bool light_facing = dot(light_dir, scene.area_lights[0].normal) < 0;
-				
-				if((!hit || (light_t < dummy.t )) && light_facing)
-				{
-					lwassert_validvec(-sample->ray.dir);
-					//visibility is implied
-					float3 phong = float3(0);//closest.material->phong.eval(-light_dir, -sample->ray.dir);
-					float3 lambert = closest.material->lambert.eval();
-					float3 sndotl = float3(saturate(dot(closest.normal, light_dir) ));
-					sd.shr.record(sample->xy, sample->depth, "DLight sndotl", sndotl);
-					//lndotl remembered from radiosity hw
-					float3 lndotl = float3(saturate(dot(scene.area_lights[0].normal, -light_dir)));
-					sd.shr.record(sample->xy, sample->depth, "DLight lndotl", lndotl);
-					float3 direct = (lambert + phong) * lndotl * sndotl * scene.area_lights[0].material->emission;
-					direct /= scene.area_lights[0].pdf();
-
-					sample->radiance += sample->throughput * direct;
-					sd.shr.record(sample->xy, sample->depth, "DLight Rad", sample->throughput * direct);
-				}
-					
-			}
-		}
-		//update ray/throughput with brdf
-		{
-			float4x4 rot;
-
-			{
-				//hopefully we can collapse this..
-				if(closest.normal.x == 0 && closest.normal.y == 0 && closest.normal.z == 1)
-				{
-					//do nothing
-				}
-				else if(closest.normal.x == 0 && closest.normal.y == 0 && closest.normal.z == -1)	
-				{
-					float3 rotaxis(0, 1, 0);
-					float rotangle = PI;
-					rot = glm::rotate(glm::degrees(rotangle), rotaxis);
-				}
-				else
-				{					
-					float3 rotaxis = cross(float3(0, 0, 1), closest.normal);
-					float rotangle = acos(dot(closest.normal, float3(0, 0, 1)));
-					rot = glm::rotate(glm::degrees(rotangle), rotaxis);
-				}				
-				
-				lwassert_notequal(closest.normal, float3(0));
-				LWASSERT_VALIDVEC(float3(rot[0]));
-				LWASSERT_VALIDVEC(float3(rot[1]));
-				LWASSERT_VALIDVEC(float3(rot[2]));
-				LWASSERT_VALIDVEC(float3(rot[3]));
-			}
-			float3 wi_world;
-			float3 weight;
-			bool sample_spec = rand.next01() > 0.5;
-			auto ndotv = dot(-sample->ray.dir, closest.normal);
-			if(sample_spec)
-			{
-				float3 wo_local = float3(glm::transpose(rot) * float4(-sample->ray.dir, 0));
-				
-				sd.shr.record(sample->xy, sample->depth, "Spec wo Local", wo_local);
-				LWASSERT_VALIDVEC(-sample->ray.dir);
-				LWASSERT_VALIDVEC(wo_local);
-				float3 wi_local;
-				lwassert_greater(wo_local.z, 0);
-				do {
-				closest.material->phong.sample(wo_local, rand, &wi_local, &weight);
-				} while(wi_local.z < 0);
-				sd.shr.record(sample->xy, sample->depth, "Spec wi Local", wi_local);
-				lwassert_allge(weight, float3(0));
-				lwassert(wi_world.length() > 0 || weight.length() == 0);
-				wi_world = float3(rot * float4(wi_local, 0));
-				sd.shr.record(sample->xy, sample->depth, "Spec wi world", wi_world);
-				sd.shr.record(sample->xy, sample->depth, "Spec weight", weight);
-				sample->specular_using_brdf = true;
-			}
-			else
-			{
-				float3 wi_local;
-				closest.material->lambert.sample(float2(rand.next01(), rand.next01()), &wi_local, &weight);	
-				lwassert_allge(weight, float3(0));			
-				wi_world = float3(rot * float4(wi_local, 0));
-				sd.shr.record(sample->xy, sample->depth, "Diffuse wi local", wi_local);
-				sd.shr.record(sample->xy, sample->depth, "Diffuse wi world", wi_world);
-				sd.shr.record(sample->xy, sample->depth, "Diffuse weight", weight);
-			}
+		sample.throughput /= survival;
+	}
+	Intersection closest;
+	bool hit = closest_intersect_ray_scene(scene, sample.ray, &closest, false);
+	if(!hit)
+	{			
+		sample.radiance += sample.throughput * background;
+		sample.finished = true;
+		return;
+	}
+	if(sample.depth == 0)
+	{
+		float3 emission = sample.throughput * closest.material->emission;
+		sample.radiance += emission;
+	}
 		
-			sample->throughput *= weight;
-			const float throughput_epsilon = 0.0001f;
-			if(sample->throughput.x < throughput_epsilon
-				&& sample->throughput.y < throughput_epsilon
-				&& sample->throughput.z < throughput_epsilon)
-			{
-				sample->finished = true;
-			}
-			else
-			{				
-				Ray wi_ray = Ray(closest.position + 0.001f * wi_world, wi_world);
-				sample->ray = wi_ray;
-				sample->depth++;
-			}
+	float3x3 zUpToWorld;
+	float3x3 worldToZUp;
+	axisConversions(closest.normal, &zUpToWorld, &worldToZUp);
+		
+	float3 wo = worldToZUp * -sample.ray.dir;
+	//update radiance with direct light
+	{
+		float3 lightPos;
+		float3 wiDirectWorld;
+		float lightPdf;	
+		float lightT;
+		scene.area_lights[0].sample(rand, closest.position, &lightPos, &wiDirectWorld, &lightPdf, &lightT);
+		Ray shadow_ray(closest.position +  wiDirectWorld * 0.001f, wiDirectWorld);
+		Intersection dummy;
+		bool hit = scene.accl->intersect(shadow_ray, &dummy, true, false);
+
+		bool light_facing = dot(wiDirectWorld, scene.area_lights[0].normal) < 0;
+		
+		if((!hit || (lightT < dummy.t )) && light_facing)
+		{					
+			float3 wiDirect = worldToZUp * wiDirectWorld;
+			float3 brdfEval = closest.material->fresnelBlend.eval(wiDirect, wo);
+			float3 ndotl = float3(saturate(dot(closest.normal, wiDirectWorld) ));
+			float3 le = scene.area_lights[0].material->emission;
 			
-			sd.shr.record(sample->xy, sample->depth, "Radiance", sample->radiance);
+			float3 direct = le * brdfEval * ndotl / lightPdf;
+			sample.radiance += sample.throughput * direct;
+		}	
+	}
+	//update ray/throughput with brdf
+	{
+		float3 weight;			
+		float3 wiIndirect;
+		closest.material->fresnelBlend.sample(wo, rand, &wiIndirect, &weight);
+		float3 wiWorldIndirect = zUpToWorld * wiIndirect;
+		sample.throughput *= weight;
+
+		const float requiredMinThroughput = 0.0001f;
+		if(glm::any(glm::lessThan(sample.throughput, float3(requiredMinThroughput))))
+		{
+			sample.finished = true;
+		}
+		else
+		{				
+			sample.ray = Ray(closest.position + 0.001f * wiWorldIndirect, wiWorldIndirect);
+			sample.depth++;
 		}
 	}
+	
 }
 int RayTracer::raytrace(int total_groups, int my_group, int groups_n, bool clear_fb, SampleDebugger& sd)
 {

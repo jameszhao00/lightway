@@ -29,9 +29,11 @@
 *.unsuccessfulbuild
 ipch/
 obj/
+GeneratedFiles/
 [Bb]in
 [Dd]ebug*/
 [Rr]elease*/
+LWFast/
 Ankh.NoLoad
 
 #Tooling

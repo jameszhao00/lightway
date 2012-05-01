@@ -3,7 +3,10 @@
 #include <glm/glm.hpp>
 #include <random>
 #include <limits>
+
+
 typedef glm::mat4 float4x4;
+typedef glm::mat3 float3x3;
 typedef glm::ivec2 int2;
 typedef glm::ivec3 int3;
 typedef glm::vec3 float3;
@@ -53,4 +56,17 @@ struct TestDeterministicRand
 inline bool equal(float a, float b, float epsilon)
 {
 	return abs(a-b) < epsilon;
+}
+
+
+#include <Eigen/Dense>
+
+using namespace Eigen;
+float3 toGlm(Vector3f v)
+{
+	return float3(v.x(), v.y(), v.z());
+}
+Vector3f toEigen(float3 v)
+{
+	return Vector3f(v.x, v.y, v.z);
 }

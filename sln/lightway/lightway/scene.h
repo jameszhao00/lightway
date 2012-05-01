@@ -17,9 +17,12 @@ struct Vertex
 };
 struct Material
 {	
+	/*
 	LambertBrdf lambert;
 	BlinnPhongBrdf phong;
-	Btdf refraction;	
+	Btdf refraction;
+	*/
+	FresnelBlendBrdf fresnelBlend;
 	float3 emission;
 };
 struct Triangle
@@ -56,6 +59,7 @@ struct StaticScene
 	int active_camera_idx;
 	void init_tweaks()
 	{	
+		/*
 		const char* mat_names[] = {
 			"mat1", "mat2", "mat3", "mat4", "mat5", "mat6", "mat7", 
 		};
@@ -71,6 +75,6 @@ struct StaticScene
 			TwAddVarRW(bar, (string("Roughness ") + idx_str).c_str(), TW_TYPE_FLOAT, &mat->phong.spec_power, "");
 			TwAddVarRW(bar, (string("Specular ") + idx_str).c_str(), TW_TYPE_COLOR3F, glm::value_ptr(mat->phong.f0), "");
 		}
-		
+		*/
 	}
 };

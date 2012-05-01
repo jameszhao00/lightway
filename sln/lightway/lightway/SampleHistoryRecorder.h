@@ -22,17 +22,21 @@ public:
 	void record(int2 xy, int depth, string name, float3 value);
 	void beginRecording(int2 pos, int count) 
 	{ 
+#ifndef LWFAST
 		assert(count > 0);
 		targetPosition_ = pos; 
 		data_.clear();
 		sampleIdx_ = -1;
 		recording_ = true;
 		recordCount_ = count;
+#endif
 	}
 	void endRecording()
 	{
+#ifndef LWFAST
 		recording_ = false;
 		emit finishedRecording();
+#endif
 	}
 private:
 	vector<vector<vector<SampleHistoryRecord>>> data_;

@@ -3,6 +3,7 @@
 
 void SampleHistoryRecorder::newSample(int2 xy)
 {
+#ifndef LWFAST
 	if(!recording_) return;
 	if(xy != targetPosition_) return;
 
@@ -20,9 +21,11 @@ void SampleHistoryRecorder::newSample(int2 xy)
 		data_.push_back(vector<vector<SampleHistoryRecord>>());
 		data_[sampleIdx_].resize(maxDepth_, vector<SampleHistoryRecord>());
 	}
+#endif
 }
 void SampleHistoryRecorder::record(int2 xy, int depth, string name, float3 value)
 {
+#ifndef LWFAST
 	if(xy != targetPosition_ || !recording_) return;
 	//new sample hasn't be called yet
 	if(data_.size() == 0) return;
@@ -31,4 +34,5 @@ void SampleHistoryRecorder::record(int2 xy, int depth, string name, float3 value
 	record.name = name;
 	record.f3Value = value;
 	data_[sampleIdx_][depth].push_back(record);
+#endif
 }

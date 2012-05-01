@@ -54,18 +54,23 @@ unique_ptr<StaticScene> load_scene(string path, float3 translation, float scale)
 		int faces_n = ai_mesh->mNumFaces;
 		unique_ptr<Material> material(new Material());
 		{
+			aiColor3D spec;
 			aiColor3D diffuse;
 			ai_scene->mMaterials[ai_mesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
-			material->lambert.albedo = float3(diffuse.r, diffuse.g, diffuse.b);
-			if(glm::any(glm::lessThan(material->lambert.albedo, float3(0))))
+			ai_scene->mMaterials[ai_mesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_SPECULAR, spec);
+
+			material->fresnelBlend.lambertBrdf.albedo = float3(diffuse.r, diffuse.g, diffuse.b);			
+			material->fresnelBlend.phongBrdf.f0 = float3(spec.r, spec.g, spec.b);
+			material->fresnelBlend.phongBrdf.spec_power = 10;
+			
+			if(glm::any(glm::lessThan(material->fresnelBlend.lambertBrdf.albedo, float3(0))))
 			{
 				cout << "clamping albedo to 0" << endl;
-				material->lambert.albedo = glm::clamp(material->lambert.albedo, float3(0), float3(FLT_MAX));
+				material->fresnelBlend.lambertBrdf.albedo = 
+					glm::clamp(material->fresnelBlend.lambertBrdf.albedo, float3(0), float3(FLT_MAX));
 			}
 		}
-		material->phong.f0 = float3(.1);
-		material->phong.spec_power = 10;
-		material->refraction.enabled = false;
+		//material->refraction.enabled = false;
 		for(int faces_i = 0; faces_i < faces_n; faces_i++)
 		{
 			Triangle triangle;

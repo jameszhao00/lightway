@@ -55,11 +55,11 @@ struct Fresnel
 		f0 = pow((eta_outside - eta_inside) / (eta_outside + eta_inside), 2); 		
 		lwassert_validfloat(f0);
 	}
-	float eval(float half_odoth) const
+	float eval(float idoth) const
 	{
 		//cosi must be > 0
-		lwassert_validfloat(half_odoth);
-		if(half_odoth > 0) return f0 + (1-f0) * pow(1-half_odoth, 5);		
+		lwassert_validfloat(idoth);
+		if(idoth > 0) return f0 + (1-f0) * pow(1-idoth, 5);		
 		lwassert(false);
 		return 1000000;
 	}
@@ -93,37 +93,37 @@ struct BlinnPhongBrdf
 	BlinnPhongBrdf() : f0(0.02), spec_power(10) { }
 	void sample(const float3& wo, Rand& rand, float3* wi, float3* weight) const
 	{
-		lwassert_greater(spec_power, 0);
+			lwassert_greater(spec_power, 0);
 
 		float r1 = rand.next01(); float r2 = rand.next01();
 		float costheta = powf(r1, 1.f / (spec_power+1));
-		lwassert_validvec(wo);
-		lwassert_validfloat(costheta);
+			lwassert_validvec(wo);
+			lwassert_validfloat(costheta);
 		float sintheta = sqrtf(glm::max(0.0f, 1-costheta*costheta));
-		lwassert_validfloat(sintheta);
+			lwassert_validfloat(sintheta);
 		float phi = r2 * 2 * PI;
-		lwassert_validfloat(phi);
+			lwassert_validfloat(phi);
 		float3 h = zup::sph2cart(sintheta, costheta, phi);
-		lwassert_validvec(h);
+			lwassert_validvec(h);
 		bool flipped = false;
 		if(!zup::same_hemi(wo, h)) {h = -h; flipped = true; }
 		*wi = glm::reflect(-wo, h);
-		lwassert_validvec(*wi);
+			lwassert_validvec(*wi);
 		
-		lwassert_greater(wo.z, 0);
+			lwassert_greater(wo.z, 0);
 		if(zup::cos_theta(*wi) <= 0)
 		{
 			*weight = float3(0); return;
 		}
-		lwassert_greater(wi->z, 0);
+			lwassert_greater(wi->z, 0);
 
 		float prob = pdf(*wi, wo);
-		lwassert_validfloat(prob);
+			lwassert_validfloat(prob);
 		
 		*weight = eval(*wi, wo) * zup::cos_theta(*wi) / prob;
-		lwassert_validvec(*weight);
-		lwassert_greater(prob, 0);
-		lwassert_allgreater(*weight, float3(0));//weight->x > 0 && weight->y > 0 && weight->z > 0);
+			lwassert_validvec(*weight);
+			lwassert_greater(prob, 0);
+			lwassert_allgreater(*weight, float3(0));//weight->x > 0 && weight->y > 0 && weight->z > 0);
 	}
 	float pdf(const float3& wi, const float3& wo) const
 	{
@@ -136,21 +136,22 @@ struct BlinnPhongBrdf
 	}
 	float3 eval(const float3& wi, const float3& wo) const
 	{		
-		lwassert_greater(spec_power, 0);
-		lwassert_validvec(wo);
-		lwassert_validvec(wi);
+			lwassert_greater(spec_power, 0);
+			lwassert_validvec(wo);
+			lwassert_validvec(wi);
 		float3 h = glm::normalize(wi + wo);
-		lwassert_validvec(h);
+			lwassert_validvec(h);
 				
-		float3 f = f0 + (float3(1) - f0) * float3(glm::pow((float)(1 - glm::dot(wi, h)), (float)5));
-		lwassert_validvec(f);
+		//float3 f = f0 + (float3(1) - f0) * float3(glm::pow((float)(1 - glm::dot(wi, h)), (float)5));
+		//	lwassert_validvec(f);
 		float3 d = float3((spec_power + 2) / (2 * PI) * pow(zup::cos_theta(h), spec_power));
-		lwassert_validvec(d);
-		return (f * d) / float3(4);
+			lwassert_validvec(d);
+		return d / float3(4);
 	}
 	float3 f0;
 	float spec_power;
 };
+
 struct Btdf
 {
 	Fresnel fresnel;
@@ -213,4 +214,42 @@ struct LambertBrdf
 		return albedo * INV_PI_V3;
 	}
 	float3 albedo;
+};
+struct FresnelBlendBrdf
+{
+	FresnelBlendBrdf() { }
+	// weight (brdf * cos) / p
+	void sample(const float3& wo, Rand& rand, float3* wi, float3* weight) const
+	{
+		float3 dummy;
+
+		if(rand.next01() > 0.5)
+		{
+			//phong
+			phongBrdf.sample(wo, rand, wi, &dummy);
+		}
+		else
+		{
+			//lambert
+			lambertBrdf.sample(float2(rand.next01(), rand.next01()), wi, &dummy);
+		}	
+		*weight = eval(*wi, wo) * zup::cos_theta(*wi) / pdf(*wi, wo);
+	}
+	float pdf(const float3& wi, const float3& wo) const
+	{
+		return 0.5f * (phongBrdf.pdf(wi, wo) + lambertBrdf.pdf(wi));
+	}
+	float3 eval(const float3& wi, const float3& wo) const
+	{				
+		float3 h = normalize(wi + wo);
+		float idoth = glm::dot(wi, h);
+		float f = fresnel.eval(idoth);
+
+		float3 diffuseEval = lambertBrdf.eval();		
+		float3 phongEval = phongBrdf.eval(wi, wo);
+		return  f * phongEval + (1-fresnel.f0) * diffuseEval;
+	}	
+	BlinnPhongBrdf phongBrdf;
+	LambertBrdf lambertBrdf;
+	Fresnel fresnel;
 };

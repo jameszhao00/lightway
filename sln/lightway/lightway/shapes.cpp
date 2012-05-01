@@ -26,7 +26,7 @@ void Ray::intersect_with_discs(const Disc* discs, const int num_discs, Intersect
 						intersections[i].hit = true;
 						intersections[i].material = discs[i].material;
 						intersections[i].position = pt;
-						intersections[i].normal = discs[i].normal;
+						intersections[i].normal = (discs[i].normal);
 						intersections[i].t = t;
 					}
 				}
@@ -66,7 +66,7 @@ void Ray::intersect_with_spheres(const Sphere* spheres, const int num_spheres, I
 				{
 					intersections[i].hit = true;
 					intersections[i].position = hit_pos;
-					intersections[i].normal = normal;
+					intersections[i].normal = (normal);
 					intersections[i].material = sph->material;
 					intersections[i].t = t;
 				}
@@ -103,7 +103,7 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
 					intersections[i].position = pos;
 					intersections[i].material = triangles[i].material;
 					intersections[i].t = barypos.z;
-					intersections[i].normal = triangles[i].normal;
+					intersections[i].normal = (triangles[i].normal);
 					
 					float3 test = glm::abs((pos - origin) / float3(intersections[i].t) - dir);
 					if( test.x > 0.01 || test.y > 0.01 || test.z > 0.01 )
@@ -132,7 +132,7 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
 					intersections[i].position = pos;
 					intersections[i].material = triangles[i].material;
 					intersections[i].t = barypos.z;
-					intersections[i].normal = triangles[i].normal;
+					intersections[i].normal = (triangles[i].normal);
 					
 				}
 			}
@@ -140,7 +140,7 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
         }
 		if(intersections[i].hit)
 		{
-			lwassert_greater(dot(intersections[i].normal, (flip_ray ? dir: -dir)), 0);// > 0);
+			//lwassert_greater(dot(intersections[i].normal, (flip_ray ? dir: -dir)), 0);// > 0);
 		}
 	}
 }

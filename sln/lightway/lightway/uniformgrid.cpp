@@ -151,10 +151,10 @@ bool UniformGrid::intersect(const Ray& ray, Intersection* intersection, bool fli
 				if(tri_intersection.hit && tri_intersection.t < closest_intersection.t && (tri_intersection.t > MIN_INTERSECTION_T))
 				{
 					
-		lwassert_notequal(tri_intersection.normal, float3(0));
+		//lwassert_notequal(tri_intersection.normal, float3(0));
 					tri_hit = true;
 					closest_intersection = tri_intersection;
-					lwassert_notequal(tri_intersection.normal, float3(0));
+					//lwassert_notequal(tri_intersection.normal, float3(0));
 				}
 			}
 			
@@ -167,7 +167,7 @@ bool UniformGrid::intersect(const Ray& ray, Intersection* intersection, bool fli
 			{				
 				//assert(voxel_max_t > ibuffer[intersection_id].t);
 				*intersection = closest_intersection;
-		lwassert_notequal(closest_intersection.normal, float3(0));
+		//lwassert_notequal(closest_intersection.normal, float3(0));
 				return true;
 			}
 		}

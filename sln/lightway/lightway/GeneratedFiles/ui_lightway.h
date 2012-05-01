@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'lightway.ui'
 **
-** Created: Mon Apr 30 19:06:46 2012
+** Created: Tue May 1 00:27:53 2012
 **      by: Qt User Interface Compiler version 4.8.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -21,7 +21,6 @@
 #include <QtGui/QMenuBar>
 #include <QtGui/QSplitter>
 #include <QtGui/QStatusBar>
-#include <QtGui/QTableView>
 #include <QtGui/QToolBar>
 #include <QtGui/QWidget>
 
@@ -30,12 +29,15 @@ QT_BEGIN_NAMESPACE
 class Ui_LightwayClass
 {
 public:
+    QAction *actionRecord_10;
+    QAction *actionRecord_50;
     QWidget *centralWidget;
     QHBoxLayout *horizontalLayout;
     QSplitter *splitter;
     QWidget *widget;
     QHBoxLayout *horizontalLayout_2;
-    QTableView *tableView;
+    QWidget *widget_2;
+    QHBoxLayout *horizontalLayout_3;
     QMenuBar *menuBar;
     QMenu *menuFile;
     QMenu *menuRender;
@@ -47,6 +49,10 @@ public:
         if (LightwayClass->objectName().isEmpty())
             LightwayClass->setObjectName(QString::fromUtf8("LightwayClass"));
         LightwayClass->resize(845, 628);
+        actionRecord_10 = new QAction(LightwayClass);
+        actionRecord_10->setObjectName(QString::fromUtf8("actionRecord_10"));
+        actionRecord_50 = new QAction(LightwayClass);
+        actionRecord_50->setObjectName(QString::fromUtf8("actionRecord_50"));
         centralWidget = new QWidget(LightwayClass);
         centralWidget->setObjectName(QString::fromUtf8("centralWidget"));
         horizontalLayout = new QHBoxLayout(centralWidget);
@@ -63,9 +69,13 @@ public:
         horizontalLayout_2->setContentsMargins(11, 11, 11, 11);
         horizontalLayout_2->setObjectName(QString::fromUtf8("horizontalLayout_2"));
         splitter->addWidget(widget);
-        tableView = new QTableView(splitter);
-        tableView->setObjectName(QString::fromUtf8("tableView"));
-        splitter->addWidget(tableView);
+        widget_2 = new QWidget(splitter);
+        widget_2->setObjectName(QString::fromUtf8("widget_2"));
+        horizontalLayout_3 = new QHBoxLayout(widget_2);
+        horizontalLayout_3->setSpacing(6);
+        horizontalLayout_3->setContentsMargins(11, 11, 11, 11);
+        horizontalLayout_3->setObjectName(QString::fromUtf8("horizontalLayout_3"));
+        splitter->addWidget(widget_2);
 
         horizontalLayout->addWidget(splitter);
 
@@ -87,6 +97,8 @@ public:
 
         menuBar->addAction(menuFile->menuAction());
         menuBar->addAction(menuRender->menuAction());
+        mainToolBar->addAction(actionRecord_10);
+        mainToolBar->addAction(actionRecord_50);
 
         retranslateUi(LightwayClass);
 
@@ -96,6 +108,8 @@ public:
     void retranslateUi(QMainWindow *LightwayClass)
     {
         LightwayClass->setWindowTitle(QApplication::translate("LightwayClass", "Lightway", 0, QApplication::UnicodeUTF8));
+        actionRecord_10->setText(QApplication::translate("LightwayClass", "Record 10", 0, QApplication::UnicodeUTF8));
+        actionRecord_50->setText(QApplication::translate("LightwayClass", "Record 50", 0, QApplication::UnicodeUTF8));
         menuFile->setTitle(QApplication::translate("LightwayClass", "Scene", 0, QApplication::UnicodeUTF8));
         menuRender->setTitle(QApplication::translate("LightwayClass", "Render", 0, QApplication::UnicodeUTF8));
     } // retranslateUi

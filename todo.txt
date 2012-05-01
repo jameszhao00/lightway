@@ -1,5 +1,7 @@
 TODO:
 
+- think the specular issue is the direct light wi/wos aren't in zup coordsys
+
 - understand why we can directly add (throughput * emission) when there's a specular
 
 - Shadow rays aren't tested vs back-facing polys (i.e. set the light to be above the cornell box.)
@@ -15,6 +17,8 @@ TODO:
 - Figure out a way to do rotation to shading axis (z up) without testing for <0,0,1> and <0,0,-1>
 
 DONE:
+
+- Implement Pixel Debugger
 
 - Fixed shadow ray stuff
 

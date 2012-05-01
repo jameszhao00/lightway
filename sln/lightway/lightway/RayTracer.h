@@ -35,10 +35,13 @@ struct RectangularAreaLight
         float3 pt = r1 * (pt1 - pt0) + pt0;
         return pt;    
     }
-    float pdf() const
-    {
-        return 1.0f / area();
-    }
+	void sample(Rand& rand, const float3& pos, float3* lightPos, float3* wiWorld, float* pdf, float* t) const
+	{
+		*lightPos = sample_pt(rand);
+		*wiWorld = normalize(*lightPos - pos);
+		*t = glm::length(*lightPos - pos);
+		*pdf = (*t * *t) / (dot(normal, -*wiWorld) * area());
+	}
     float area() const
     {
         return length(corners[0] - corners[3]) * length(corners[1] - corners[2]);
@@ -64,7 +67,7 @@ struct RectangularAreaLight
 
 		intersection->hit = true;
 		intersection->material = material;
-		intersection->normal = normal;
+		intersection->normal = (normal);
 		intersection->position = pt;
 		intersection->t = d;
 		return true;
@@ -78,7 +81,7 @@ struct RectangularAreaLight
 struct RTScene
 {
 	RTScene() : scene(nullptr)
-	{
+	{/*
 		materials[0].lambert.albedo = float3(.8, .2, .2);	
 		materials[0].phong.spec_power = 10;
 		materials[0].phong.f0 = float3(.08);
@@ -103,6 +106,7 @@ struct RTScene
 		lights[0].color = float3(1);
 		float offsetX = -24;
 		float offsetZ = -20;
+		*/
 		/*
 		float3 light_verts[] = {
 			float3(343.f/555*48+offsetX, 39.5, 227.f/555*48+offsetZ),		
@@ -124,14 +128,14 @@ struct RTScene
         area_lights[0].normal = float3(0, -1, 0);
 		light_material.emission = float3(5);
 		area_lights[0].material = &light_material;
-
+		/*
 		triangles.push_back(Triangle(
 			float3(-1, .2, -1),
             float3(1, .2, -1), 
             float3(0, .2, 1), 
             normalize(float3(0.01, 1, 0)),
             &materials[0]));
-           
+           */
 
 	}
 	void make_accl()
