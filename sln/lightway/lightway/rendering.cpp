@@ -53,7 +53,6 @@ float4x4 Camera::view() const
 void Camera::on_mouse_up()
 {
 	mouse_pos = int2(-1, -1); 
-	stateIdx++;
 }
 void Camera::on_mouse_move(int2 new_pos)
 {

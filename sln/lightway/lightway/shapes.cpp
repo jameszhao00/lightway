@@ -74,6 +74,7 @@ void Ray::intersect_with_spheres(const Sphere* spheres, const int num_spheres, I
 		}
 	}
 }
+const float MIN_T = 0.001;
 void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris, Intersection* intersections, bool flip_ray) const
 {
 	for(int i = 0; i < num_tris; i++)
@@ -91,9 +92,10 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
 					triangles[i].vertices[2].position, 
 					barypos);
 
-				intersections[i].hit = hit;
-				if(hit)
+				if(hit && (barypos.z > MIN_T))
 				{
+					
+					intersections[i].hit = true;
 					float3 pos = 
 						triangles[i].vertices[0].position * (1-barypos.x-barypos.y) + 
 						triangles[i].vertices[1].position * barypos.x + 
@@ -102,7 +104,12 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
 					intersections[i].material = triangles[i].material;
 					intersections[i].t = barypos.z;
 					intersections[i].normal = triangles[i].normal;
-
+					
+					float3 test = glm::abs((pos - origin) / float3(intersections[i].t) - dir);
+					if( test.x > 0.01 || test.y > 0.01 || test.z > 0.01 )
+					{
+						intersections[i].material = nullptr;
+					}
 				}
 			}
 			else
@@ -114,9 +121,10 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
 					triangles[i].vertices[0].position, 
 					barypos);
 
-				intersections[i].hit = hit;
-				if(hit)
+				if(hit && (barypos.z > MIN_T))
 				{
+					
+				intersections[i].hit = true;
 					float3 pos = 
 						triangles[i].vertices[2].position * (1-barypos.x-barypos.y) + 
 						triangles[i].vertices[1].position * barypos.x + 
@@ -125,7 +133,7 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
 					intersections[i].material = triangles[i].material;
 					intersections[i].t = barypos.z;
 					intersections[i].normal = triangles[i].normal;
-
+					
 				}
 			}
             

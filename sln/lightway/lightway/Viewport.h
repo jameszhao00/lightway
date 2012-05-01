@@ -1,6 +1,7 @@
 #pragma once
 #include "stdafx.h"
 #include "lightway.h"
+#include "debug.h"
 #include <QtGui/QApplication>
 #include <QThread>
 #include <QtOpenGL>
@@ -8,7 +9,6 @@
 #include <iostream>
 #include <list>
 #include "RayTracer.h"
-#include "debug.h"
 #include <functional>
 using namespace std;
 #define INVALID_TEXTURE 1000000
@@ -18,12 +18,8 @@ class Viewport : public QGLWidget
 {
 	Q_OBJECT
 public:
-	Viewport() : texture_(-1), rayTracer(nullptr) 
+	Viewport() : texture_(INVALID_TEXTURE), rayTracer(nullptr) 
 	{ 		
-		TwInit(TW_OPENGL, NULL);
-
-		//connect(QAbstractEventDispatcher::instance(), SIGNAL(aboutToBlock()),
-		//	this, SLOT(updateGL()));
 		setFocusPolicy(Qt::ClickFocus);
 	}
     void glInit()
@@ -33,38 +29,32 @@ public:
     	glDisable(GL_CULL_FACE); GLE;
     	glEnable( GL_TEXTURE_2D ); GLE;		
 	}
-	void paintGL()
-	{		
-    	glClearDepth(1); GLE;
-    	glClearColor(1, 0, 0, 0); GLE;
-    	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); GLE;
-			
-		glViewport(0, 0, width(), height()); GLE;
-		if(rayTracer != nullptr)
-		{
-			int halfW = width()/2;
-			int h = height();
-			//glViewport(0, 0, halfW, h); GLE;
-			drawFramebuffer(rayTracer->linear_fb);
-			//glViewport(halfW, 0, halfW, h); GLE;
-			/*
-			for(int i = 0; i < slaves->size(); i++)
-			{
-				(*slaves)[i]->drawDebug();
-			}
-			*/
-		}
-		glViewport(0, 0, width(), height()); GLE;
-			
 
-		//TwDraw();
-		//QApplication::processEvents();
-		update();
-	}
 	void drawFramebuffer(const float4* rgbFb)
 	{	
 		int w = width(); int h = height();
-		//TODO: copy rgbFb to fbData (gamma correct it)
+		
+		glMatrixMode(GL_PROJECTION); GLE;
+		glLoadIdentity(); GLE;
+
+		glMatrixMode(GL_MODELVIEW); GLE;
+		glLoadIdentity(); GLE;
+		texture_ = INVALID_TEXTURE;
+    	glDisable(GL_DEPTH_TEST); GLE;
+    	glDisable(GL_CULL_FACE); GLE;
+    	glEnable( GL_TEXTURE_2D ); GLE;	
+
+		if(texture_ == INVALID_TEXTURE)
+		{
+			glGenTextures(1, &texture_); GLE;		
+			glBindTexture(GL_TEXTURE_2D, texture_); GLE;
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); GLE;
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); GLE;
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); GLE;
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); GLE;
+
+		}
+		
 		
 		for(int y = 0; y < h; y++)
 		{
@@ -85,7 +75,6 @@ public:
 		glBindTexture(GL_TEXTURE_2D, texture_); GLE;
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, rt_w, rt_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, fbData_); GLE;
 		
-		glViewport(0, 0, rt_w, rt_h); GLE;
 		glBegin( GL_QUADS );
 		{	
 			glTexCoord2f(0, 0);
@@ -101,7 +90,6 @@ public:
 			glVertex4f(-1, 1, 0, 1);		
 		}
 		glEnd(); GLE;
-		glViewport(0, 0, w, h); GLE;
 	}
 	void resizeEvent ( QResizeEvent * event )
 	{
@@ -109,19 +97,6 @@ public:
 	}
 	void resizeGL(int nw, int nh)
 	{
-		if(texture_ != INVALID_TEXTURE)
-		{
-			glDeleteTextures(1, &texture_); GLE;
-		}
-		
-		glGenTextures(1, &texture_); GLE;
-		
-		glBindTexture(GL_TEXTURE_2D, texture_); GLE;
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); GLE;
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); GLE;
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); GLE;
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); GLE;
-
 		glMatrixMode(GL_PROJECTION); GLE;
 		glLoadIdentity(); GLE;
 
@@ -130,7 +105,35 @@ public:
 	}
 	RayTracer* rayTracer;
 	vector<RenderSlave*>* slaves;
+	QPoint selectedPoint;
 protected:
+	
+    void paintEvent(QPaintEvent *event)
+	{		
+		QPainter painter(this);
+		painter.beginNativePainting();
+
+		glViewport(0, 0, width(), height()); GLE;
+    	glClearDepth(1); GLE;
+    	glClearColor(0, 0, 1, 0); GLE;
+    	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); GLE;
+			
+		glViewport(0, 0, width(), height()); GLE;
+		if(rayTracer != nullptr)
+		{
+			drawFramebuffer(rayTracer->linear_fb);
+		}
+			
+		painter.endNativePainting();
+		
+		painter.setPen(Qt::red);
+		painter.drawLine(selectedPoint - QPoint(5, 0), selectedPoint + QPoint(5, 0));
+		painter.drawLine(selectedPoint - QPoint(0, 5), selectedPoint + QPoint(0, 5));
+		
+		painter.end();
+		
+		update();
+	}
 	virtual void keyPressEvent(QKeyEvent* evt) 
 	{
 		if(evt->key() == Qt::Key_W)
@@ -150,9 +153,21 @@ protected:
 			rayTracer->camera.on_keyboard_event('D');
 		}
 	}
-	
+	virtual void mousePressEvent(QMouseEvent* evt)
+	{
+		if(evt->buttons() == Qt::LeftButton)
+		{
+			selectedPoint = evt->pos();
+			selectedPoint.setY(height() - selectedPoint.y());
+		}
+	}
 	virtual void mouseMoveEvent(QMouseEvent* evt)
 	{
+		if(evt->buttons() == Qt::LeftButton)
+		{
+			selectedPoint = evt->pos();
+			selectedPoint.setY(height() - selectedPoint.y());
+		}
 		if(evt->buttons() == Qt::RightButton)
 		{			
 			rayTracer->camera.on_mouse_move(int2(evt->pos().x(), evt->pos().y()));
@@ -161,6 +176,7 @@ protected:
 	virtual void mouseReleaseEvent(QMouseEvent* evt)
 	{		
 		rayTracer->camera.on_mouse_up();
+
 	}
 	//this object hiearchy is a giant mess...
 private:

@@ -6,6 +6,7 @@
 #include "shapes.h"
 #include "lwmath.h"
 #include "uniformgrid.h"
+#include "SampleHistoryRecorder.h"
 
 const int num_spheres = 2;
 const int num_discs = 1;
@@ -51,6 +52,9 @@ struct RectangularAreaLight
 		if(fabs(rdotn) < epsilon) return false;
 
 		float d = dot(corners[0] - ray.origin, normal) / rdotn;
+
+		if(d < 0) return false;
+
 		float3 pt = ray.at(d);
 		float dp = dot(normalize(pt - corners[3]), normalize(corners[0] - corners[3]));
 		if((dot(normalize(pt - corners[0]), normalize(corners[1] - corners[0]))) < -epsilon) return false;
@@ -153,6 +157,7 @@ struct Sample
 	Ray ray;
 	float3 throughput;
 	float3 radiance;
+	int2 xy;
 	bool finished;
 	bool specular_using_brdf;
 	int depth;
@@ -163,6 +168,7 @@ struct Sample
 		throughput = float3(1);
 		finished = false;
 		specular_using_brdf = false;
+		xy = int2(0);
 	}
 };
 class RayTracer
@@ -183,8 +189,8 @@ public:
 		delete [] sample_fb;
 	}
 	//returns rays count
-	void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, bool debug, DebugDraw& debug_draw);
-    int raytrace(DebugDraw& dd, int total_groups, int my_group, int group_n, bool clear_fb);
+	void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, SampleDebugger& sd);
+    int raytrace(int total_groups, int my_group, int group_n, bool clear_fb, SampleDebugger& sd);
     void resize(int w, int h);
 
 	Camera camera;

@@ -14,17 +14,20 @@
    <string>Lightway</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
     <item>
-     <widget class="QSplitter" name="splitter">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <widget class="QWidget" name="widget" native="true">
-       <layout class="QHBoxLayout" name="horizontalLayout_2"/>
-      </widget>
-      <widget class="QTableView" name="tableView"/>
-     </widget>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QWidget" name="widget" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout_3"/>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="widget_2" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout_4"/>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -57,8 +60,20 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="actionRecord_10"/>
+   <addaction name="actionRecord_50"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionRecord_10">
+   <property name="text">
+    <string>Record 10</string>
+   </property>
+  </action>
+  <action name="actionRecord_50">
+   <property name="text">
+    <string>Record 50</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>

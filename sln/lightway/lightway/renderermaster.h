@@ -31,33 +31,33 @@ public:
 			QThread* thread = new QThread();
 			rs->moveToThread(thread);
 			
-			connect(this, SIGNAL(nextTraceStep(RayTracer*, int, int, int, int)), 
-				rs, SLOT(traceStep(RayTracer*, int, int, int, int)));
+			connect(this, SIGNAL(nextTraceStep(RayTracer*, int, int, int, int, SampleDebugger*)), 
+				rs, SLOT(traceStep(RayTracer*, int, int, int, int, SampleDebugger*)));
 			connect(rs, SIGNAL(traceStepFinished(int)), this, SLOT(traceStepFinished(int)));
 			
 			thread->start();
 		}
 	}
 signals:
-	void nextTraceStep(RayTracer*, int, int, int, int);
+	void nextTraceStep(RayTracer*, int, int, int, int, SampleDebugger*);
 public slots:
 	void traceStepFinished(int group)
 	{
-		emit nextTraceStep(&rayTracer, group, slaves.size(), viewport->size().width(), viewport->size().height());
+		emit nextTraceStep(&rayTracer, group, slaves.size(), viewport->size().width(), viewport->size().height(), &sampleDebugger);
 	}
 public:
 	virtual void run()
 	{		
 		for(int i = 0; i < slaves.size(); i++)
 		{
-			emit nextTraceStep(&rayTracer, i, slaves.size(), viewport->size().width(), viewport->size().height());
+			emit nextTraceStep(&rayTracer, i, slaves.size(), viewport->size().width(), viewport->size().height(), &sampleDebugger);
 		}
 		while(true)
 		{		
 			rayTracer.camera.ar = (float)viewport->width() / viewport->height();
 		}
 	}
-	DebugDraw dd;
+	SampleDebugger sampleDebugger;
 	Viewport* viewport;
 	vector<RenderSlave*> slaves;
 	unique_ptr<StaticScene> static_scene;
