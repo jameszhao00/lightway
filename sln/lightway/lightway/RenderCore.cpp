@@ -172,7 +172,55 @@ float3 directLightMis(Rand& rand, const RTScene& scene, const Intersection& pt, 
 	lwassert_greater(brdfPdf, 0);
 	return float3(2) * le * brdfEval * cosTheta / (lightPdf + brdfPdf);
 }
-const int RANDOM_TERMINATION_DEPTH = 3;
+float3 directUsingLightSamplingMis(Rand& rand, const RTScene& scene, const Intersection& pt, const float3x3& worldToZUp, 
+	const float3x3& zUpWoWorld, const float3& wo, int* lightIdx)
+{
+	auto & light = scene.area_lights[0];
+	float3 lightPos;
+	float3 wiDirectWorld;
+	float lightPdf;
+	float lightT;
+	//sample the light
+	light.sample(rand, pt.position, &lightPos, &wiDirectWorld, &lightPdf, &lightT);
+
+	//see if we're occluded
+	Ray shadowRay(pt.position, wiDirectWorld);
+	IntersectionQuery shadowQuery(shadowRay, true);	
+	Intersection occluderIntersection;
+	bool hitOccluder = scene.accl->intersect(shadowQuery, &occluderIntersection);
+	
+	bool unoccluded = !hitOccluder || lightT < occluderIntersection.t;
+	bool lightFacingSurface = 
+		(dot(wiDirectWorld, -light.normal) > 0) && //light intersection should skip this... but??
+		(dot(wiDirectWorld, pt.normal) > 0); //can happen if we sample light and it's partially behind us
+	if(!(unoccluded && lightFacingSurface))
+	{
+		//we missed the light, or we're in shadow, or we're not facing it
+		return float3(0);
+	}
+	float3 wiDirect = worldToZUp * wiDirectWorld;
+	//pdf the brdf
+	float brdfPdf = pt.material->fresnelBlend.pdf(wiDirect, wo);
+	float3 brdfEval = pt.material->fresnelBlend.eval(wiDirect, wo);
+	float3 cosTheta = float3(dot(pt.normal, wiDirectWorld));
+	float3 le = light.material->emission;
+	
+	//balanced heuristic - fPdf / (fPdf + gPdf) * fPdf simplifies to 1/(fPdf + gPdf)
+	return le * brdfEval * cosTheta / (lightPdf + brdfPdf);
+}
+float3 directUsingBrdfSamplingMis(const RectangularAreaLight& light, 
+	float distance, const float3& wiWorld, const float& cosTheta, float brdfPdf, const float3& brdfEval)
+{
+	//if we're being called
+	//we're unoccluded
+
+	//evaluate the light pdf
+	float lightPdf = light.pdf(wiWorld, distance);
+	float3 le = light.material->emission;
+	//combine
+	return le * brdfEval * cosTheta / (lightPdf + brdfPdf);
+}
+const int RANDOM_TERMINATION_DEPTH = 8;
 const int RT_MAX_DEPTH = 8;
 void RenderCore::processSample(Rand& rand, Sample* sample)
 {
@@ -221,8 +269,8 @@ void RenderCore::processSample(Rand& rand, Sample* sample)
 		
 	float3 wo = worldToZUp * -sample->ray.dir;
 	//update radiance with direct light
-	//sample->radiance += sample->throughput * directLight(rand, *scene, closest, worldToZUp, wo);
-	sample->radiance += sample->throughput * directLightMis(rand, *scene, closest, worldToZUp, zUpToWorld, wo);
+	sample->radiance += sample->throughput * directLight(rand, *scene, closest, worldToZUp, wo);
+	//sample->radiance += sample->throughput * directLightMis(rand, *scene, closest, worldToZUp, zUpToWorld, wo);
 	//update ray/throughput with brdf	
 	{
 		float3 weight;			
@@ -250,6 +298,82 @@ void RenderCore::processSample(Rand& rand, Sample* sample)
 			sample->ray = Ray(closest.position + 0.001f * wiWorldIndirect, wiWorldIndirect);
 			sample->depth++;
 		}
+	}
+}
+void RenderCore::processSampleToCompletion(Rand& rand, Sample* sample)
+{
+	float3 throughput(1);
+
+	Ray woWorldRay;
+	Intersection isect;
+	bool hitScene = false;
+	//setup
+	{
+		//intersect with scene
+		IntersectionQuery sceneIsectQuery(sample->ray, false);
+		hitScene = closest_intersect_ray_scene(*scene, sceneIsectQuery, &isect);
+		//if we happen to hit a light source, add Le and quit
+		if(hitScene && validLightIdx(isect.lightIdx))
+		{
+			sample->radiance = isect.material->emission;
+			return;
+		}
+		woWorldRay = sample->ray;
+	}
+	//path trace
+	for(int depth = 0; depth < (RT_MAX_DEPTH + 1); depth++)
+	{		
+		//we need isect, woWorldRay, and hitScene
+
+		//if we didn't hit anything, add background and quit
+		if(!hitScene)
+		{
+			sample->radiance += throughput * background;
+			return;
+		}		
+		float3x3 zUpToWorld;
+		float3x3 worldToZUp;
+		axisConversions(isect.normal, &zUpToWorld, &worldToZUp);
+		float3 wo = worldToZUp * -woWorldRay.dir;
+		//add direct light contribution using light sampling
+		int lightIdx;
+		sample->radiance += throughput *
+			directUsingLightSamplingMis(rand, *scene, isect, worldToZUp, zUpToWorld, wo, &lightIdx);		
+		//sample the brdf
+		float3 weight;
+		float3 wiIndirect;
+		isect.material->fresnelBlend.sample(wo, float2(rand.next01(), rand.next01()), &wiIndirect, &weight);
+		float brdfPdf = isect.material->fresnelBlend.pdf(wiIndirect, wo);
+		float3 brdfEval = isect.material->fresnelBlend.eval(wiIndirect, wo);
+		float3 wiWorldIndirect = zUpToWorld * wiIndirect;
+		//don't mul. throughput by weight just yet... we need to add light
+		//intersect with the scene
+		Ray nextWoWorldRay(isect.position, wiWorldIndirect);
+		IntersectionQuery nextSceneIsectQuery(nextWoWorldRay, false);
+		Intersection nextIsect;
+		bool nextHitScene = closest_intersect_ray_scene(*scene, nextSceneIsectQuery, &nextIsect);
+		//add direct light contribution from the BRDF sample direction (with MIS)
+		if(nextHitScene && validLightIdx(nextIsect.lightIdx))
+		{
+			//todo: what happens if we don't hit the light during light samplign (facing wrong direction)
+			//but we do hit it here?
+			//if we hit a different light, quit... 
+			if(lightIdx != nextIsect.lightIdx) return;
+			else
+			{				
+				//add direct light contrib.
+				//TODO: maybe we should mul. throughput by weight...
+				sample->radiance += throughput * 
+					directUsingBrdfSamplingMis(*(scene->light(nextIsect.lightIdx)), nextIsect.t, 
+					wiWorldIndirect, dot(wiWorldIndirect, isect.normal), brdfPdf, brdfEval);
+			}
+		}
+		//mul. throughput by brdf weight
+		throughput *= weight;
+		hitScene = nextHitScene;
+		isect = nextIsect;
+		woWorldRay = nextWoWorldRay;
+		//todo: implement Russian Roulette here
 	}
 }
 int RenderCore::step(Rand& rand, int groupIdx)
@@ -298,9 +422,16 @@ int RenderCore::step(Rand& rand, int groupIdx)
 			
 			sampleDebugger_.shr.newSample(sample.xy);
 			
-			while(!sample.finished)
-			{				
-				processSample(rand, &sample);
+			if(0)
+			{
+				while(!sample.finished)
+				{				
+					processSample(rand, &sample);
+				}
+			}
+			else
+			{
+				processSampleToCompletion(rand, &sample);
 			}
 
 			samples_n += 1;
@@ -374,7 +505,7 @@ void RenderCore::workThread(int groupIdx)
 {
 	Rand rand;
 	int iteration = 0;
-	while(!stopSignal_)
+	while(!stopSignal_ && iteration < 2)
 	{
 		step(rand, groupIdx);
 		iteration++;

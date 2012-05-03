@@ -22,8 +22,10 @@ struct Camera
 };
 struct Intersection
 {
+	Intersection() : position(INF), normal(INF), lightIdx(-1), hit(false), material(nullptr), t(INF) { }
 	float3 position;
 	float3 normal;
+	int lightIdx;
 	bool hit;
 	const Material* material;
 	float t;

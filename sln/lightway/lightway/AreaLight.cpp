@@ -60,5 +60,6 @@ bool RectangularAreaLight::intersect(const IntersectionQuery& query, Intersectio
 	intersection->normal = (normal);
 	intersection->position = pt;
 	intersection->t = d;
+	intersection->lightIdx = idx;
 	return true;
 } 

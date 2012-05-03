@@ -12,12 +12,6 @@ const int num_spheres = 2;
 const int num_discs = 1;
 const int num_lights = 1;
 const int num_area_lights = 1;
-struct Light
-{
-	Light () : color(1) { }
-	float3 position;
-	float3 color;
-};
 struct RTScene
 {
 	RTScene() : scene(nullptr)
@@ -55,12 +49,15 @@ struct RTScene
 	{		
 		accl = make_uniform_grid(*(this->scene), int3(30));
 	}
+	const RectangularAreaLight* light(int lightIdx)
+	{
+		return &area_lights[lightIdx];
+	}
 	Material light_material;
     RectangularAreaLight area_lights[num_area_lights];
 	Sphere spheres[num_spheres];
 	Disc discs[num_discs];
 	Material materials[4];
-	Light lights[num_lights];
 	vector<Triangle> triangles;
 	unique_ptr<UniformGrid> accl;
 	unique_ptr<StaticScene> scene;
@@ -111,6 +108,7 @@ private:
 	void workThread(int groupIdx);
 	
 	void processSample(Rand& rand, Sample* sample);
+	void processSampleToCompletion(Rand& rand, Sample* sample);
     int step(Rand& rand, int groupIdx);
 private:
     int2 size_;

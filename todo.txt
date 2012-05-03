@@ -1,5 +1,10 @@
 TODO:
 
+- change initial MIS to be light only
+
+- move the calc intersection to be @ the end of the processSample
+	- so we can use the intersection for a BRDF MIS
+
 - there's no ambient occlusion like effect in the creases! (maybe spec power's too high?)
 
 - don't think my understanding of MIS is correct
