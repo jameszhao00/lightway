@@ -6,15 +6,7 @@
 #include "SampleHistoryViewer.h"
 #include "asset.h"
 
-/*
-struct mat
-{
-	union {
-		FresnelBlendBrdf fresnel;
-		LambertBrdf lambert;
-	};
-};
-*/
+
 Lightway::Lightway(QWidget *parent, Qt::WFlags flags)
 	: QMainWindow(parent, flags)
 {
