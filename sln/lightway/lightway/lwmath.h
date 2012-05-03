@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <glm/ext.hpp>
 #include <random>
 #include <limits>
 
@@ -83,4 +84,26 @@ namespace zup // z up
 inline float luminance(float3 rgb)
 {
 	 return glm::dot(float3(0.2126, 0.7152, 0.0722), rgb);
+}
+
+inline void axisConversions(const float3& normal, float3x3* zUpToWorld, float3x3* worldToZUp)
+{
+	//hopefully we can collapse this..
+	if(normal.x == 0 && normal.y == 0 && normal.z == 1)
+	{
+		//do nothing
+	}
+	else if(normal.x == 0 && normal.y == 0 && normal.z == -1)	
+	{
+		float3 rotaxis(0, 1, 0);
+		float rotangle = PI;
+		*zUpToWorld = float3x3(glm::rotate(glm::degrees(rotangle), rotaxis));
+	}
+	else
+	{					
+		float3 rotaxis = cross(float3(0, 0, 1), normal);
+		float rotangle = acos(dot(normal, float3(0, 0, 1)));
+		*zUpToWorld = float3x3(glm::rotate(glm::degrees(rotangle), rotaxis));
+	}
+	*worldToZUp = glm::transpose(*zUpToWorld);	
 }

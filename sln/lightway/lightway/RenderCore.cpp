@@ -32,146 +32,6 @@ bool closest_intersect_ray_scene(const RTScene& scene, const IntersectionQuery& 
 	}
 	return false;
 }
-void axisConversions(const float3& normal, float3x3* zUpToWorld, float3x3* worldToZUp)
-{
-	//hopefully we can collapse this..
-	if(normal.x == 0 && normal.y == 0 && normal.z == 1)
-	{
-		//do nothing
-	}
-	else if(normal.x == 0 && normal.y == 0 && normal.z == -1)	
-	{
-		float3 rotaxis(0, 1, 0);
-		float rotangle = PI;
-		*zUpToWorld = float3x3(glm::rotate(glm::degrees(rotangle), rotaxis));
-	}
-	else
-	{					
-		float3 rotaxis = cross(float3(0, 0, 1), normal);
-		float rotangle = acos(dot(normal, float3(0, 0, 1)));
-		*zUpToWorld = float3x3(glm::rotate(glm::degrees(rotangle), rotaxis));
-	}
-	*worldToZUp = glm::transpose(*zUpToWorld);	
-}
-//always samples according to the light. 
-//the MIS version combines light sampling with brdf sampling
-float3 directLight(Rand& rand, const RTScene& scene, const Intersection& pt, const float3x3& worldToZUp, const float3& wo)
-{
-	float3 lightPos;
-	float3 wiDirectWorld;
-	float lightPdf;	
-	float lightT;
-
-	scene.area_lights[0].sample(rand, pt.position, &lightPos, &wiDirectWorld, &lightPdf, &lightT);
-
-	Ray shadow_ray(pt.position, wiDirectWorld);
-	IntersectionQuery shadowQuery(shadow_ray, true);
-	Intersection occluderIntersection;
-	bool occluderHit = scene.accl->intersect(shadowQuery, &occluderIntersection);
-		
-	//light has to be facing the surface
-	//-wiDirectWorld . lightNormal > 0
-	//wiDirectWorld . normal > 0
-	bool lightFacingSurface = 
-		(dot(-wiDirectWorld, scene.area_lights[0].normal) > 0) &&
-		(dot(wiDirectWorld, pt.normal) > 0);
-	bool unoccluded = !occluderHit || (lightT < occluderIntersection.t);
-	if(unoccluded && lightFacingSurface)
-	{		
-		float3 wiDirect = worldToZUp * wiDirectWorld;
-		float3 brdfEval = pt.material->fresnelBlend.eval(wiDirect, wo);
-		//float3 brdfEval = closest.material->fresnelBlend.lambertBrdf.eval();
-		float3 ndotl = float3(dot(pt.normal, wiDirectWorld) );
-		lwassert_greater(ndotl.x, 0);
-		float3 le = scene.area_lights[0].material->emission;
-			
-		float3 direct = le * brdfEval * ndotl / lightPdf;
-		return direct;
-	}	
-	return float3(0);
-}
-
-float3 directLightMis(Rand& rand, const RTScene& scene, const Intersection& pt, const float3x3& worldToZUp, 
-	const float3x3& zUpWoWorld, const float3& wo)
-{
-	bool sampleLight = rand.next01() > 0.5;
-	auto & light = scene.area_lights[0];
-	float lightPdf;
-	float brdfPdf;
-	float3 wiDirectWorld;
-	float lightT;
-	float3 wiDirect; //only initally valid if we sampled the brdf
-	if(sampleLight)
-	{
-		//sample light
-		float3 lightPos;
-		light.sample(rand, pt.position, &lightPos, &wiDirectWorld, &lightPdf, &lightT);
-	}
-	else
-	{
-		//sample brdf
-		float3 weight;
-		pt.material->fresnelBlend.sample(wo, float2(rand.next01(), rand.next01()), &wiDirect, &weight);
-		brdfPdf = pt.material->fresnelBlend.pdf(wiDirect, wo);
-		wiDirectWorld = zUpWoWorld * wiDirect;
-	}
-	//wiDirectWorld is now set
-
-	//see if the light is occluded
-	//first, intersect with the world
-	Ray shadowRay(pt.position, wiDirectWorld);
-	IntersectionQuery shadowQuery(shadowRay, true);	
-	Intersection occluderIntersection;
-	bool hitOccluder = scene.accl->intersect(shadowQuery, &occluderIntersection);	
-	bool hitLight = sampleLight; //if we sampled the light, we know we hit it!
-	if(!sampleLight)
-	{
-		//only intersect with light if we brdf sampled (didn't light sample)
-		shadowQuery.flipRay = false; //flip back (originally flipped)
-		Intersection lightIntersection;
-		hitLight = light.intersect(shadowQuery, &lightIntersection);		
-		lightT = lightIntersection.t;
-	}
-	if(!hitLight) 
-	{
-		return float3(0);
-	}
-	//we know we hit the light now...
-	
-	//lightT is now set
-	bool unoccluded = !hitOccluder || lightT < occluderIntersection.t;
-	bool lightFacingSurface = 
-		(dot(wiDirectWorld, -light.normal) > 0) && //light intersection should skip this... but??
-		(dot(wiDirectWorld, pt.normal) > 0); //can happen if we sample light and it's partially behind us
-	if(!(unoccluded && lightFacingSurface))
-	{
-		//we missed the light, or we're in shadow, or we're not facing it
-		return float3(0);
-	}
-	//if unoccluded, combine the two
-	if(sampleLight)
-	{		
-		//get brdf pdf
-		wiDirect = worldToZUp * wiDirectWorld;
-		brdfPdf = pt.material->fresnelBlend.pdf(wiDirect, wo);
-	}
-	else
-	{
-		//get light pdf
-		lightPdf = light.pdf(wiDirectWorld, lightT);
-	}
-	//wiDirect is now all set
-	//eval the brdf
-	float3 brdfEval = pt.material->fresnelBlend.eval(wiDirect, wo);
-	float3 cosTheta = float3(dot(pt.normal, wiDirectWorld));
-	float3 le = light.material->emission;
-	//balanced heuristic - fPdf / (fPdf + gPdf) * fPdf simplifies to 1/(fPdf + gPdf)
-	lwassert_validfloat(lightPdf);
-	lwassert_validfloat(brdfPdf);
-	lwassert_greater(lightPdf, 0);
-	lwassert_greater(brdfPdf, 0);
-	return float3(2) * le * brdfEval * cosTheta / (lightPdf + brdfPdf);
-}
 float3 directUsingLightSamplingMis(Rand& rand, const RTScene& scene, const Intersection& pt, const float3x3& worldToZUp, 
 	const float3x3& zUpWoWorld, const float3& wo, int* lightIdx)
 {
@@ -223,84 +83,6 @@ float3 directUsingBrdfSamplingMis(const RectangularAreaLight& light,
 }
 const int RANDOM_TERMINATION_DEPTH = 8;
 const int RT_MAX_DEPTH = 8;
-void RenderCore::processSample(Rand& rand, Sample* sample)
-{
-	auto & sd = sampleDebugger_;
-	if(sample->depth > RT_MAX_DEPTH) 
-	{
-		sample->finished = true; 
-		return;
-	}
-	
-	sd.shr.record(sample->xy, sample->depth, "Throughput Start", sample->throughput);
-	
-	if(sample->depth > RANDOM_TERMINATION_DEPTH)
-	{
-		float survival = glm::min(luminance(sample->throughput), 0.5f);
-		if(rand.next01() > survival)
-		{
-			sample->finished = true;
-			return;
-		}
-		sample->throughput /= survival;
-	}
-	
-	
-	Intersection closest;
-	IntersectionQuery bounceQuery(sample->ray, false);
-	bool hit = closest_intersect_ray_scene(*scene, bounceQuery, &closest);
-	if(!hit)
-	{			
-		sd.shr.record(sample->xy, sample->depth, "Missed", float3(1));
-		sample->radiance += sample->throughput * background;
-		sample->finished = true;
-		return;
-	}
-	
-	sd.shr.record(sample->xy, sample->depth, "normal", closest.normal);
-	if(sample->depth == 0)
-	{
-		float3 emission = sample->throughput * closest.material->emission;
-		sample->radiance += emission;
-	}
-		
-	float3x3 zUpToWorld;
-	float3x3 worldToZUp;
-	axisConversions(closest.normal, &zUpToWorld, &worldToZUp);
-		
-	float3 wo = worldToZUp * -sample->ray.dir;
-	//update radiance with direct light
-	sample->radiance += sample->throughput * directLight(rand, *scene, closest, worldToZUp, wo);
-	//sample->radiance += sample->throughput * directLightMis(rand, *scene, closest, worldToZUp, zUpToWorld, wo);
-	//update ray/throughput with brdf	
-	{
-		float3 weight;			
-		float3 wiIndirect;
-		//closest.material->fresnelBlend.lambertBrdf.sample(float2(rand.next01(), rand.next01()),
-		//	&wiIndirect, &weight);
-		closest.material->fresnelBlend.sample(wo, float2(rand.next01(), rand.next01()), &wiIndirect, &weight);
-		//closest.material->fresnelBlend.lambertBrdf.sample(float2(rand.next01(), rand.next01()), &wiIndirect, &weight);
-		
-		float3 wiWorldIndirect = zUpToWorld * wiIndirect;
-		sample->throughput *= weight;
-		sd.shr.record(sample->xy, sample->depth, "wi Indirect", wiIndirect);
-		sd.shr.record(sample->xy, sample->depth, "wiWorld Indirect", wiWorldIndirect);
-		sd.shr.record(sample->xy, sample->depth, "Indirect Weight", weight);
-		sd.shr.record(sample->xy, sample->depth, "Throughput End", sample->throughput);
-
-		const float requiredMinThroughput = 0.001f;
-		if(glm::all(glm::lessThan(sample->throughput, float3(requiredMinThroughput))))
-		{
-			sample->finished = true;
-			sd.shr.record(sample->xy, sample->depth, "Terminated", float3(1));
-		}
-		else
-		{				
-			sample->ray = Ray(closest.position + 0.001f * wiWorldIndirect, wiWorldIndirect);
-			sample->depth++;
-		}
-	}
-}
 void RenderCore::processSampleToCompletion(Rand& rand, Sample* sample)
 {
 	float3 throughput(1);
@@ -356,10 +138,8 @@ void RenderCore::processSampleToCompletion(Rand& rand, Sample* sample)
 		//add direct light contribution from the BRDF sample direction (with MIS)
 		if(nextHitScene && validLightIdx(nextIsect.lightIdx))
 		{
-			
-			//todo: what happens if we don't hit the light during light samplign (facing wrong direction)
-			//but we do hit it here?
 			//if we hit a different light, quit... 
+			//should probably change this later on
 			if(lightIdx != nextIsect.lightIdx) return;
 			else
 			{		
@@ -424,17 +204,8 @@ int RenderCore::step(Rand& rand, int groupIdx)
 			
 			sampleDebugger_.shr.newSample(sample.xy);
 			
-			if(0)
-			{
-				while(!sample.finished)
-				{				
-					processSample(rand, &sample);
-				}
-			}
-			else
-			{
-				processSampleToCompletion(rand, &sample);
-			}
+			processSampleToCompletion(rand, &sample);
+			
 
 			samples_n += 1;
 			float3 color = sample.radiance;
