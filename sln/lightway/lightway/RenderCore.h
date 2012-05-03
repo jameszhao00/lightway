@@ -17,12 +17,14 @@ struct RTScene
 	RTScene() : scene(nullptr)
 	{	
 		float3 base(.5, .5, 0);
+		
 		float3 light_verts[] = {
 			float3(-.125, .3, -.125),
 			float3(-.125,.3, .125),
 			float3(.125, .3, .125),
 			float3(.125, .3, -.125)
 		};
+		
 		/*
 		float3 light_verts[] = {
 			base + float3(0, .025, .025),

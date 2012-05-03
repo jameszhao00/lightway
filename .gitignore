@@ -10,6 +10,7 @@
 *.pchi
 
 /ref/
+/blog/
 *.intermediate.manifest
 *.lastbuildstate
 

@@ -176,6 +176,7 @@ float3 directUsingLightSamplingMis(Rand& rand, const RTScene& scene, const Inter
 	const float3x3& zUpWoWorld, const float3& wo, int* lightIdx)
 {
 	auto & light = scene.area_lights[0];
+	*lightIdx = 0;
 	float3 lightPos;
 	float3 wiDirectWorld;
 	float lightPdf;
@@ -355,12 +356,13 @@ void RenderCore::processSampleToCompletion(Rand& rand, Sample* sample)
 		//add direct light contribution from the BRDF sample direction (with MIS)
 		if(nextHitScene && validLightIdx(nextIsect.lightIdx))
 		{
+			
 			//todo: what happens if we don't hit the light during light samplign (facing wrong direction)
 			//but we do hit it here?
 			//if we hit a different light, quit... 
 			if(lightIdx != nextIsect.lightIdx) return;
 			else
-			{				
+			{		
 				//add direct light contrib.
 				//TODO: maybe we should mul. throughput by weight...
 				sample->radiance += throughput * 
@@ -505,7 +507,7 @@ void RenderCore::workThread(int groupIdx)
 {
 	Rand rand;
 	int iteration = 0;
-	while(!stopSignal_ && iteration < 2)
+	while(!stopSignal_)
 	{
 		step(rand, groupIdx);
 		iteration++;
