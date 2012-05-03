@@ -18,6 +18,7 @@ struct Light
 	float3 position;
 	float3 color;
 };
+const float MIN_RAY_NORMAL_ANGLE = 0.0001;
 struct RectangularAreaLight
 {
     RectangularAreaLight() : normal(0), material(nullptr) { }
@@ -42,6 +43,10 @@ struct RectangularAreaLight
 		*t = glm::length(*lightPos - pos);
 		*pdf = (*t * *t) / (dot(normal, -*wiWorld) * area());
 	}
+	float pdf(const float3& wi, float d)
+	{
+		return (d * d) / (zup::cos_theta(wi) * area());
+	}
     float area() const
     {
         return length(corners[0] - corners[3]) * length(corners[1] - corners[2]);
@@ -49,10 +54,10 @@ struct RectangularAreaLight
 	bool intersect(const Ray& ray, Intersection* intersection, bool flip_ray) const
 	{
 		//normally, ray and normal's directions have to be opposite
-		if(dot(float3(flip_ray ? -1 : 1) * ray.dir, normal) > 0) return false;
+		if(dot(float3(flip_ray ? -1 : 1) * ray.dir, normal) > MIN_RAY_NORMAL_ANGLE) return false;
 		float rdotn = dot(ray.dir, normal);
 		const float epsilon = 0.0001f;
-		if(fabs(rdotn) < epsilon) return false;
+		if(fabs(rdotn) < MIN_RAY_NORMAL_ANGLE) return false;
 
 		float d = dot(corners[0] - ray.origin, normal) / rdotn;
 
@@ -81,66 +86,39 @@ struct RectangularAreaLight
 struct RTScene
 {
 	RTScene() : scene(nullptr)
-	{/*
-		materials[0].lambert.albedo = float3(.8, .2, .2);	
-		materials[0].phong.spec_power = 10;
-		materials[0].phong.f0 = float3(.08);
-		materials[1].lambert.albedo = float3(1);	
-		materials[1].phong.spec_power = 100;
-    		materials[2].lambert.albedo = float3(.2, .2, .8);	
-    		materials[2].phong.spec_power = 10;
-    		materials[2].phong.f0 = float3(.08);
-
-			auto fresnel = &materials[0].refraction.fresnel;
-			fresnel->eta_inside = 1.3333f;
-			fresnel->eta_outside = 1;
-			fresnel->cache_f0();
-
-			materials[0].refraction.enabled = false;
-
-		spheres[0] = Sphere(float3(0, 1, -5), 1, &materials[0]);
-		spheres[1] = Sphere(float3(2.2, 1, -5), 1, &materials[2]);
-		discs[0] = Disc(float3(0, 0, 0), normalize(float3(.01, 1, 0)), 30, &materials[1]);
-
-		lights[0].position = float3(-4, 10, 0);
-		lights[0].color = float3(1);
-		float offsetX = -24;
-		float offsetZ = -20;
-		*/
-		/*
+	{	
+		float3 base(.5, .5, 0);/*
 		float3 light_verts[] = {
-			float3(343.f/555*48+offsetX, 39.5, 227.f/555*48+offsetZ),		
-			float3(343.f/555*48+offsetX, 39.5, 332.f/555*48+offsetZ),
-			float3(213.f/555*48+offsetX, 39.5, 332.f/555*48+offsetZ),	
-			float3(213.f/555*48+offsetX, 39.5, 227.f/555*48+offsetZ)
+			float3(-.125, .3, -.125),
+			float3(-.125,.3, .125),
+			float3(.125, .3, .125),
+			float3(.125, .3, -.125)
 		};*/
 		
 		float3 light_verts[] = {
-			float3(-.25, .35, -.25),
-			float3(-.25, .35, .25),
-			float3(.25, .35, .25),
-			float3(.25, .35, -.25)
+			base + float3(0, .025, .025),
+			base + float3(0, .025, -.025),
+			base + float3(0, -.025, -.025),
+			base + float3(0, -.025, .025)
 		};
+		/*
+		float3 light_verts[] = {
+			base + float3(-1, 3, 1),
+			base + float3(-1, 3, -1),
+			base + float3(1, 3, -1),
+			base + float3(1, 3, 1)
+		};*/
         area_lights[0].corners[0] = light_verts[0];//float3(-1, 39.5, -1);
         area_lights[0].corners[1] = light_verts[1];//float3(1, 39.5, -1);
         area_lights[0].corners[2] = light_verts[2];//float3(1, 39.5, 1);
         area_lights[0].corners[3] = light_verts[3];//float3(-1, 39.5, 1);
-        area_lights[0].normal = float3(0, -1, 0);
-		light_material.emission = float3(5);
+        area_lights[0].normal = float3(-1, 0, 0);
+		light_material.emission = float3(350);
 		area_lights[0].material = &light_material;
-		/*
-		triangles.push_back(Triangle(
-			float3(-1, .2, -1),
-            float3(1, .2, -1), 
-            float3(0, .2, 1), 
-            normalize(float3(0.01, 1, 0)),
-            &materials[0]));
-           */
-
 	}
 	void make_accl()
 	{		
-		accl = make_uniform_grid(*(this->scene), int3(20));
+		accl = make_uniform_grid(*(this->scene), int3(30));
 	}
 	Material light_material;
     RectangularAreaLight area_lights[num_area_lights];
@@ -150,10 +128,9 @@ struct RTScene
 	Light lights[num_lights];
 	vector<Triangle> triangles;
 	unique_ptr<UniformGrid> accl;
-	const StaticScene* scene;
+	unique_ptr<StaticScene> scene;
 };
-class DebugDraw;
-const int FB_CAPACITY = 2048;
+const int FB_CAPACITY = 1024;
 
 struct Sample
 {
@@ -175,40 +152,36 @@ struct Sample
 		xy = int2(0);
 	}
 };
-class RayTracer
+const int MAX_RENDER_THREADS = 8;
+#include <boost/thread.hpp>
+class RenderCore
 {    
 public:    
-	void init()
-	{
-		use_fresnel = true;
-	}
-	RayTracer() : background(0)//135.0f/255, 180.0f/255, 250.0f/255) 
-	{ 
-        linear_fb = new float4[FB_CAPACITY * FB_CAPACITY];
-        sample_fb = new Sample[FB_CAPACITY * FB_CAPACITY];
-	}
-    ~RayTracer() 
-	{ 
-		delete [] linear_fb;
-		delete [] sample_fb;
-	}
-	//returns rays count
-	void RayTracer::process_samples(const RTScene& scene, Rand& rand, Sample* samples_array, int sample_n, SampleDebugger& sd);
-    int raytrace(int total_groups, int my_group, int group_n, bool clear_fb, SampleDebugger& sd);
-    void resize(int w, int h);
-
+	RenderCore();
+    ~RenderCore();
+public:
+    void resize(const int2& size);
+	void clear();
+	void startWorkThreads();
+	void stopWorkThreads();
+	SampleDebugger& sampleDebugger() { return sampleDebugger_; }
+	
 	Camera camera;
     float4* linear_fb;
-	Sample* sample_fb;
-    //Color* fb;
-    int w; int h;
-    int2 debug_pixel;
 	float3 background;
 	RTScene* scene;
-    Rand rand[32];
-	bool use_fresnel;
-	int spp;
 private:
-    RayTracer(const RayTracer& other) { assert(false); }
-    RayTracer& operator=(const RayTracer& other) { assert(false); }
+    RenderCore(const RenderCore& other);
+    RenderCore& operator=(const RenderCore& other);
+	void workThread(int groupIdx);
+	
+	void processSample(Rand& rand, Sample* sample);
+    int step(Rand& rand, int groupIdx);
+private:
+    int2 size_;
+	bool clearSignal_[MAX_RENDER_THREADS];
+	int cachedWorkThreadN_;
+	bool stopSignal_;
+	vector<boost::thread> workThreads_;
+	SampleDebugger sampleDebugger_;
 };

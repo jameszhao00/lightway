@@ -4,8 +4,18 @@
 
 #Visual Studio files
 *My Inspector XE Results*
+*My Amplifier XE Results*
+*.codeanalysis
+*.codeanalysisast
+*.pchi
 
 /ref/
+*.intermediate.manifest
+*.lastbuildstate
+
+*.exe
+*.pdb
+*.tlog
 *.[Oo]bj
 *.user
 *.aps

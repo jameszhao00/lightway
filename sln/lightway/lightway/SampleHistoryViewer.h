@@ -80,7 +80,7 @@ public slots:
 		keyToRowMapping.clear();
 	}
 public:
-	SampleHistoryViewer() : historyRecorder_(nullptr) 
+	SampleHistoryViewer(QWidget* parent = nullptr) : QTableView(parent), historyRecorder_(nullptr) 
 	{ 
 		setModel(&model);
 	}

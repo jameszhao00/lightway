@@ -58,7 +58,7 @@ inline bool equal(float a, float b, float epsilon)
 	return abs(a-b) < epsilon;
 }
 
-
+/*
 #include <Eigen/Dense>
 
 using namespace Eigen;
@@ -69,4 +69,4 @@ float3 toGlm(Vector3f v)
 Vector3f toEigen(float3 v)
 {
 	return Vector3f(v.x, v.y, v.z);
-}
+}*/

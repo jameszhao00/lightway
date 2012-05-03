@@ -27,6 +27,7 @@ inline void lwassert_validfloat(float v, int line_num = -1)
 inline void lwassert_validvec(float3 v, int line_num = -1)
 {
 }
+#define LWASSERT_VALIDFLOAT(X) ((void)0)
 #define LWASSERT_VALIDVEC(X) ((void)0)
 template<typename T>
 inline void lwassert(T b)
@@ -96,12 +97,12 @@ inline void lwassert_validfloat(float v, int line_num = -1)
 {
 	if(du::isnan(v)) 
 	{ 
-		printf("float is NAN"); 
+		printf("(L%d) float is NAN", line_num); 
 		__debugbreak();
 	} 
 	if(du::isinf(v)) 
 	{ 
-		printf("float is INF"); 
+		printf("(L%d) float is INF", line_num); 
 		__debugbreak();
 	} 
 }
@@ -119,6 +120,7 @@ inline void lwassert_validvec(float3 v, int line_num = -1)
 	}
 }
 #define LWASSERT_VALIDVEC(X) lwassert_validvec((X), __LINE__)
+#define LWASSERT_VALIDFLOAT(X) lwassert_validfloat((X), __LINE__)
 template<typename T>
 inline void lwassert(T b)
 {

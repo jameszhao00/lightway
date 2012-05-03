@@ -38,6 +38,14 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="Tests">
+      <UniqueIdentifier>{c4238be1-c658-495b-b363-b9cfc56af8fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Generated Files\Analysis">
+      <UniqueIdentifier>{98f90526-ba81-41d7-87d5-33d8971eb0f4}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -53,24 +61,6 @@
       <Filter>Generated Files</Filter>
     </ClCompile>
     <ClCompile Include="asset.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="debug.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="fbx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="math.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="pch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RayTracer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RectangleAreaLightTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="rendering.cpp">
@@ -91,59 +81,62 @@
     <ClCompile Include="SampleHistoryRecorder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_SampleHistoryViewer.cpp">
-      <Filter>Generated Files\Debug</Filter>
+    <ClCompile Include="RenderCore.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_SampleHistoryViewer.cpp">
-      <Filter>Generated Files\Release</Filter>
+    <ClCompile Include="RectangleAreaLightTest.cpp">
+      <Filter>Tests</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\LWFast\moc_SampleHistoryViewer.cpp">
-      <Filter>Generated Files\LWFast</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_SampleHistoryRecorder.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_SampleHistoryRecorder.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\LWFast\moc_SampleHistoryRecorder.cpp">
-      <Filter>Generated Files\LWFast</Filter>
+    <ClCompile Include="TestAggregates.cpp">
+      <Filter>Tests</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_Viewport.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_Viewport.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\LWFast\moc_Viewport.cpp">
       <Filter>Generated Files\LWFast</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_RenderSlave.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_RenderSlave.cpp">
+    <ClCompile Include="GeneratedFiles\Release\moc_Viewport.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\LWFast\moc_RenderSlave.cpp">
-      <Filter>Generated Files\LWFast</Filter>
+    <ClCompile Include="GeneratedFiles\Analysis\moc_Viewport.cpp">
+      <Filter>Generated Files\Analysis</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_renderermaster.cpp">
+    <ClCompile Include="GeneratedFiles\Debug\moc_SampleHistoryViewer.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_renderermaster.cpp">
+    <ClCompile Include="GeneratedFiles\LWFast\moc_SampleHistoryViewer.cpp">
+      <Filter>Generated Files\LWFast</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_SampleHistoryViewer.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\LWFast\moc_renderermaster.cpp">
+    <ClCompile Include="GeneratedFiles\Analysis\moc_SampleHistoryViewer.cpp">
+      <Filter>Generated Files\Analysis</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_SampleHistoryRecorder.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\LWFast\moc_SampleHistoryRecorder.cpp">
       <Filter>Generated Files\LWFast</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_SampleHistoryRecorder.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Analysis\moc_SampleHistoryRecorder.cpp">
+      <Filter>Generated Files\Analysis</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_lightway.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\LWFast\moc_lightway.cpp">
+      <Filter>Generated Files\LWFast</Filter>
+    </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_lightway.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\LWFast\moc_lightway.cpp">
-      <Filter>Generated Files\LWFast</Filter>
+    <ClCompile Include="GeneratedFiles\Analysis\moc_lightway.cpp">
+      <Filter>Generated Files\Analysis</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -159,31 +152,16 @@
     <ClInclude Include="bxdf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="debug.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="debugutils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RayTracer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="rendering.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="sampling.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="shapes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="test.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="test_uniformgrid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="tribox.h">
@@ -195,11 +173,14 @@
     <ClInclude Include="lwmath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="fbx.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="RenderCore.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="pch.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="test.h">
+      <Filter>Tests</Filter>
+    </ClInclude>
+    <ClInclude Include="test_uniformgrid.h">
+      <Filter>Tests</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -213,12 +194,6 @@
       <Filter>Resource Files</Filter>
     </CustomBuild>
     <CustomBuild Include="Viewport.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="RenderSlave.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="renderermaster.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="SampleHistoryRecorder.h">

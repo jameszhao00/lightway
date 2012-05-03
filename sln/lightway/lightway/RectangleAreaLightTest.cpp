@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "test.h"
-#include "RayTracer.h"
+#include "RenderCore.h"
 
 void test_rectangular_area_lights()
 {

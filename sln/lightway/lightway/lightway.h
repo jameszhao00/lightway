@@ -3,10 +3,13 @@
 
 #include <QtGui/QMainWindow>
 #include "ui_lightway.h"
+#include <memory>
+using namespace std;
 
 class Viewport;
 class SampleHistoryViewer;
-class RendererMaster;
+class RenderCore;
+class RTScene;
 class Lightway : public QMainWindow
 {
 	Q_OBJECT
@@ -21,19 +24,25 @@ public:
 	void setPreviewWidget(QWidget* widget)
 	{
 		ui.widget->layout()->addWidget(widget);
-		widget->setMaximumSize(300, 300);
-		widget->setMinimumSize(300, 300);
+		widget->setMaximumSize(600, 600);
+		widget->setMinimumSize(600, 600);
 	}
+	void startRendering();
+	void stopRendering();
 public slots:
 	
 	void recordingFinished();
 	void record10();
 	void record50();
+protected:	
+	void closeEvent(QCloseEvent *event);
 private:
+	unique_ptr<RTScene> scene;
+
 	Ui::LightwayClass ui;
 	Viewport* viewport;
 	SampleHistoryViewer* historyViewer;
-	RendererMaster* renderMaster;
+	unique_ptr<RenderCore> renderCore_;
 };
 
 #endif // LIGHTWAY_H

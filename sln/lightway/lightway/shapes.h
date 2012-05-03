@@ -65,3 +65,25 @@ struct Ray
 	
 	bool intersect_with_aabb(const AABB& aabb, float* t, float* t_max_out) const;
 };
+
+struct IntersectionQuery
+{
+	IntersectionQuery(const Ray& pRay, bool pFlipRay, float pMaxT = INF, float pMinT = 0.001f, float pMinCosTheta = 0.001f) :	
+		ray(pRay), flipRay(pFlipRay), maxT(pMaxT), minT(pMinT), minCosTheta(pMinCosTheta) 
+	{
+	}
+		
+	Ray ray;
+	float maxT;
+	float minT;
+	float minCosTheta;
+	bool flipRay;
+
+	bool isValid(const Intersection& intersection) const
+	{
+		bool result = intersection.t < maxT && 
+			intersection.t > minT &&
+			fabs(dot(ray.dir, intersection.normal)) > minCosTheta;
+		return result;
+	}
+};

@@ -3,6 +3,7 @@
 #include "renderslave.h"
 #include "viewport.h"
 #include "asset.h"
+/*
 class RendererMaster : public QThread
 {
 	Q_OBJECT
@@ -17,7 +18,6 @@ public:
 		static_scene = load_scene("../../../assets/validation/diffuse_validation.lwo", float3(0, 0, 0), 1);
 		scene.scene = static_scene.get();
 		scene.make_accl();
-		//static_scene->init_tweaks();
 	}
 	void init()
 	{
@@ -64,3 +64,4 @@ public:
 	RTScene scene;
 	RayTracer rayTracer;
 };
+*/

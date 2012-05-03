@@ -2,14 +2,7 @@
 #include "lwmath.h"
 #include <iostream>
 using namespace std;
-void sph2cart(float sintheta, float costheta, float phi, float3* cart)
-{
-    *cart = float3(sintheta * cos(phi), sintheta * sin(phi), costheta);
-}
-float3 sph2cart(float sintheta, float costheta, float phi)
-{
-    return float3(sintheta * cos(phi), sintheta * sin(phi), costheta);
-}
+
 float blinnphong_pdf(float3 h, float3 v, float3 normal, float exponent)
 {
     float costheta = dot(h, normal);

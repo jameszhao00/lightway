@@ -28,15 +28,15 @@ namespace zup // z up
 	{ 
 		lwassert_validvec(v);
 		float temp = sin_theta2(v);
-		lwassert_validfloat(temp);
+		LWASSERT_VALIDFLOAT(temp);
 		if (temp <= 0.0f) return 0.0f;
 		else return std::sqrt(temp);
 	}	
 	inline float3 sph2cart(float sintheta, float costheta, float phi)
 	{
-		lwassert_validfloat(sintheta);
-		lwassert_validfloat(costheta);
-		lwassert_validfloat(phi);
+		LWASSERT_VALIDFLOAT(sintheta);
+		LWASSERT_VALIDFLOAT(costheta);
+		LWASSERT_VALIDFLOAT(phi);
 		return float3(sintheta * cos(phi), sintheta * sin(phi), costheta);
 	}
 	inline bool same_hemi(const float3& a, const float3& b)
@@ -48,20 +48,14 @@ namespace zup // z up
 };
 struct Fresnel
 {	
-	float eta_inside, eta_outside;
-	float f0;
-	void cache_f0() 
-	{
-		f0 = pow((eta_outside - eta_inside) / (eta_outside + eta_inside), 2); 		
-		lwassert_validfloat(f0);
-	}
-	float eval(float idoth) const
+	float3 f0;
+	float3 eval(float idoth) const
 	{
 		//cosi must be > 0
-		lwassert_validfloat(idoth);
-		if(idoth > 0) return f0 + (1-f0) * pow(1-idoth, 5);		
+		LWASSERT_VALIDFLOAT(idoth);
+		if(idoth > 0) return f0 + (float3(1)-f0) * float3(pow(1-idoth, 5));
 		lwassert(false);
-		return 1000000;
+		return float3(0);
 	}
 };
 struct PerfectSpecular
@@ -90,23 +84,29 @@ struct PerfectSpecular
 };
 struct BlinnPhongBrdf
 {
-	BlinnPhongBrdf() : f0(0.02), spec_power(10) { }
-	void sample(const float3& wo, Rand& rand, float3* wi, float3* weight) const
+	BlinnPhongBrdf() : spec_power(10) { }
+	void sample(const float3& wo, const float2& rand, float3* wi, float3* weight) const
 	{
+		
 			lwassert_greater(spec_power, 0);
 
-		float r1 = rand.next01(); float r2 = rand.next01();
-		float costheta = powf(r1, 1.f / (spec_power+1));
-			lwassert_validvec(wo);
-			lwassert_validfloat(costheta);
-		float sintheta = sqrtf(glm::max(0.0f, 1-costheta*costheta));
-			lwassert_validfloat(sintheta);
-		float phi = r2 * 2 * PI;
-			lwassert_validfloat(phi);
+		float costheta = powf(rand.x, 1.f / (spec_power+1));
+			LWASSERT_VALIDVEC(wo);
+			LWASSERT_VALIDFLOAT(costheta);
+			
+			//float k = std::acos(1.f);//0.0f, );
+		float sintheta = sqrtf(1.f-costheta*costheta);
+			LWASSERT_VALIDFLOAT(sintheta);
+		float phi = rand.y * 2 * PI;
+			LWASSERT_VALIDFLOAT(phi);
 		float3 h = zup::sph2cart(sintheta, costheta, phi);
 			lwassert_validvec(h);
 		bool flipped = false;
-		if(!zup::same_hemi(wo, h)) {h = -h; flipped = true; }
+		if(!zup::same_hemi(wo, h)) 
+		{
+			h = -h; flipped = true; 
+		}
+
 		*wi = glm::reflect(-wo, h);
 			lwassert_validvec(*wi);
 		
@@ -118,19 +118,20 @@ struct BlinnPhongBrdf
 			lwassert_greater(wi->z, 0);
 
 		float prob = pdf(*wi, wo);
-			lwassert_validfloat(prob);
+			LWASSERT_VALIDFLOAT(prob);
 		
 		*weight = eval(*wi, wo) * zup::cos_theta(*wi) / prob;
 			lwassert_validvec(*weight);
 			lwassert_greater(prob, 0);
 			lwassert_allgreater(*weight, float3(0));//weight->x > 0 && weight->y > 0 && weight->z > 0);
+			
 	}
 	float pdf(const float3& wi, const float3& wo) const
 	{
 		float3 h = glm::normalize(wi + wo);
 		lwassert_validvec(h);
 		float cos_theta_hi = glm::dot(h, wi);
-		lwassert_greater(cos_theta_hi, 0);
+		if(cos_theta_hi <=0) return 0;
 		return (spec_power+1)*pow(zup::cos_theta(h), spec_power)
 			/ (2 * PI * 4 * cos_theta_hi);
 	}
@@ -141,17 +142,15 @@ struct BlinnPhongBrdf
 			lwassert_validvec(wi);
 		float3 h = glm::normalize(wi + wo);
 			lwassert_validvec(h);
-				
 		//float3 f = f0 + (float3(1) - f0) * float3(glm::pow((float)(1 - glm::dot(wi, h)), (float)5));
 		//	lwassert_validvec(f);
 		float3 d = float3((spec_power + 2) / (2 * PI) * pow(zup::cos_theta(h), spec_power));
 			lwassert_validvec(d);
-		return d / float3(4);
+		return d;
 	}
-	float3 f0;
 	float spec_power;
 };
-
+/*
 struct Btdf
 {
 	Fresnel fresnel;
@@ -182,15 +181,17 @@ struct Btdf
 	}
 private:	
 };
+*/
 
 struct Dielectric
 {
 	BlinnPhongBrdf reflection;
-	Btdf refraction;
+	//Btdf refraction;
+	/*
 	const Fresnel* fresnel()
 	{
 		return &refraction.fresnel;
-	}
+	}*/
 };
 struct LambertBrdf
 {	
@@ -219,35 +220,54 @@ struct FresnelBlendBrdf
 {
 	FresnelBlendBrdf() { }
 	// weight (brdf * cos) / p
-	void sample(const float3& wo, Rand& rand, float3* wi, float3* weight) const
+	void sample(const float3& wo, float2& rand, float3* wi, float3* weight) const
 	{
 		float3 dummy;
-
-		if(rand.next01() > 0.5)
+		bool phong;
+		if(rand.x > 0.5f)
 		{
+			rand.x = (rand.x - 0.5f) * 2;
 			//phong
 			phongBrdf.sample(wo, rand, wi, &dummy);
+			phong = true;
 		}
 		else
 		{
 			//lambert
-			lambertBrdf.sample(float2(rand.next01(), rand.next01()), wi, &dummy);
+			rand.x = rand.x * 2;
+			lambertBrdf.sample(rand, wi, &dummy);
+			phong = false;
 		}	
-		*weight = eval(*wi, wo) * zup::cos_theta(*wi) / pdf(*wi, wo);
+		if(glm::all(glm::lessThanEqual(dummy, float3(0))))
+		{
+			*weight = float3(0);
+		}
+		else
+		{
+			*weight = eval(*wi, wo) * zup::cos_theta(*wi) / pdf(*wi, wo);
+		}
 	}
 	float pdf(const float3& wi, const float3& wo) const
 	{
+		float result = 0.5f * (phongBrdf.pdf(wi, wo) + lambertBrdf.pdf(wi));
+		if(phongBrdf.pdf(wi, wo)  <= 0)
+		{
+			cout << "";
+		}
 		return 0.5f * (phongBrdf.pdf(wi, wo) + lambertBrdf.pdf(wi));
 	}
 	float3 eval(const float3& wi, const float3& wo) const
 	{				
 		float3 h = normalize(wi + wo);
 		float idoth = glm::dot(wi, h);
-		float f = fresnel.eval(idoth);
+		float3 f = fresnel.eval(idoth);
 
 		float3 diffuseEval = lambertBrdf.eval();		
 		float3 phongEval = phongBrdf.eval(wi, wo);
-		return  f * phongEval + (1-fresnel.f0) * diffuseEval;
+
+		return  
+			f * phongEval / (float3(4) * zup::cos_theta(wi) * zup::cos_theta(wo))
+			+ (float3(1)-fresnel.f0) * diffuseEval;
 	}	
 	BlinnPhongBrdf phongBrdf;
 	LambertBrdf lambertBrdf;

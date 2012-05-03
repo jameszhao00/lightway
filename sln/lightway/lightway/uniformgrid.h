@@ -50,7 +50,7 @@ class UniformGrid
 public:
 	UniformGrid(int3 subdivisions, const AABB& p_aabb);
 	~UniformGrid();
-	bool intersect(const Ray& ray, Intersection* intersection, bool flip_ray, bool verbose = false) const;
+	bool intersect(const IntersectionQuery& query, Intersection* intersection) const;
 	Voxel* cell(int3 cellid) const;
 	void cell_bound(const int3& cellid, float3* cell_min_pt, float3* cell_max_pt) const;
 	AABB cell_bound(const int3& cellid) const;

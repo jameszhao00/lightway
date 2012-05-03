@@ -7,10 +7,8 @@
 #include <cstdio>
 #include <iostream>
 #include <list>
-#include "RayTracer.h"
 using namespace std;
-#define INVALID_TEXTURE 1000000
-
+/*
 
 class RenderSlave : public QObject
 {
@@ -38,3 +36,4 @@ private:
 	int cameraStateIdx;
 	int myGroup_;
 };
+*/

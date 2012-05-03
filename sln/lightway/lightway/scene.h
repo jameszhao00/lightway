@@ -17,11 +17,6 @@ struct Vertex
 };
 struct Material
 {	
-	/*
-	LambertBrdf lambert;
-	BlinnPhongBrdf phong;
-	Btdf refraction;
-	*/
 	FresnelBlendBrdf fresnelBlend;
 	float3 emission;
 };
@@ -52,29 +47,7 @@ struct Triangle
 };
 struct StaticScene
 {
-	StaticScene() : active_camera_idx(-1) { }
+	StaticScene(){ }
 	vector<Triangle> triangles;
 	vector<unique_ptr<Material>> materials;
-	vector<Camera> cameras;
-	int active_camera_idx;
-	void init_tweaks()
-	{	
-		/*
-		const char* mat_names[] = {
-			"mat1", "mat2", "mat3", "mat4", "mat5", "mat6", "mat7", 
-		};
-		auto bar = TwNewBar("Scene");
-		TwAddVarRW(bar, "Active Camera", TW_TYPE_INT32, &active_camera_idx, "");
-		for(size_t mat_i = 0; mat_i < materials.size(); mat_i++)
-		{
-			Material* mat = materials[mat_i].get();
-			stringstream st;
-			st << mat_i;
-			auto idx_str = st.str();
-			TwAddVarRW(bar, (string("Albedo ") + idx_str).c_str(), TW_TYPE_COLOR3F, glm::value_ptr(mat->lambert.albedo), "");
-			TwAddVarRW(bar, (string("Roughness ") + idx_str).c_str(), TW_TYPE_FLOAT, &mat->phong.spec_power, "");
-			TwAddVarRW(bar, (string("Specular ") + idx_str).c_str(), TW_TYPE_COLOR3F, glm::value_ptr(mat->phong.f0), "");
-		}
-		*/
-	}
 };

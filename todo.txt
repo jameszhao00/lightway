@@ -1,8 +1,15 @@
 TODO:
 
-- think the specular issue is the direct light wi/wos aren't in zup coordsys
+- work on floating point precision issues
+	- intersections
+	- brdf
 
-- understand why we can directly add (throughput * emission) when there's a specular
+
+- test Debug mode with ICC/FP:Fast
+
+- see if the fireflies are caused by area light's inverse distance squared thing
+
+- think the specular issue is the direct light wi/wos aren't in zup coordsys
 
 - Shadow rays aren't tested vs back-facing polys (i.e. set the light to be above the cornell box.)
 
@@ -17,6 +24,14 @@ TODO:
 - Figure out a way to do rotation to shading axis (z up) without testing for <0,0,1> and <0,0,-1>
 
 DONE:
+
+
+- fixed: the uniform grid thing is broken (try 30 subdivisions)
+	- try 3 / 7 / 11 / 13 etc... not perfectly divisible stuff and see what happens
+	- fix by applying an epsilon to max t in the 'ignore intersection outside the voxel' thing
+
+
+- understood - understand why we can directly add (throughput * emission) when there's a specular
 
 - Implement Pixel Debugger
 
@@ -45,3 +60,6 @@ NOTES:
 
 - be careful with shadow rays 
 	If they do intersect, make sure it's in front of the desired light source
+
+-be careful of floating point stuff
+	- when testing intersections, make sure cap it with min/max T, min cos theta, etc

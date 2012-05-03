@@ -30,22 +30,7 @@ unique_ptr<StaticScene> load_scene(string path, float3 translation, float scale)
         aiProcess_SortByPType);
 
 	float4x4 t = glm::translate(translation) * glm::scale(float3(scale));
-	if(ai_scene->HasCameras())
-	{
-		for(int i = 0; i < ai_scene->mNumCameras; i++)
-		{
-			auto ai_camera = ai_scene->mCameras[i];
-			Camera camera;
-			camera.eye = to_glm(ai_camera->mPosition);
-			camera.ar = ai_camera->mAspect;
-			camera.forward = glm::normalize(to_glm(ai_camera->mLookAt));
-			camera.fovy = ai_camera->mHorizontalFOV;
-			camera.up = to_glm(ai_camera->mUp);
-			camera.zf = ai_camera->mClipPlaneFar;
-			camera.zn = ai_camera->mClipPlaneNear;
-			scene->cameras.push_back(camera);
-		}
-	}
+
 	auto error = importer.GetErrorString();
 	lwassert(ai_scene);
 	for(int i = 0; i < ai_scene->mNumMeshes; i++)
@@ -60,9 +45,9 @@ unique_ptr<StaticScene> load_scene(string path, float3 translation, float scale)
 			ai_scene->mMaterials[ai_mesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_SPECULAR, spec);
 
 			material->fresnelBlend.lambertBrdf.albedo = float3(diffuse.r, diffuse.g, diffuse.b);			
-			material->fresnelBlend.phongBrdf.f0 = float3(spec.r, spec.g, spec.b);
-			material->fresnelBlend.phongBrdf.spec_power = 10;
-			
+			material->fresnelBlend.fresnel.f0 = float3(spec.r, spec.g, spec.b);
+			material->fresnelBlend.phongBrdf.spec_power = 100;
+
 			if(glm::any(glm::lessThan(material->fresnelBlend.lambertBrdf.albedo, float3(0))))
 			{
 				cout << "clamping albedo to 0" << endl;

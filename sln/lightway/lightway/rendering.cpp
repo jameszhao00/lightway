@@ -40,7 +40,11 @@ int closest_intersection(const Intersection* intersections, int num_intersection
     return closest_i;    
 }
 
-Camera::Camera() : stateIdx(0), fovy(45), zn(1), zf(300), eye(float3(2, 0, 0)), forward(float3(-1, 0, 0)), up(float3(0, 1, 0)), mouse_pos(int2(-1, -1)) { }
+Camera::Camera() : stateIdx(0), fovy(45), zn(1), zf(300), eye(float3(2, 1, 0)), 
+	forward(float3(-1, 0, 0)), up(float3(0, 1, 0)), mouse_pos(int2(-1, -1))
+{
+	forward = normalize(-eye);
+}
 float4x4 Camera::projection() const
 {
 	return glm::perspective(45.0f, ar, zn, zf);
@@ -72,7 +76,7 @@ void Camera::on_mouse_move(int2 new_pos)
 void Camera::on_keyboard_event(char key)
 {
 	float3 left = cross(up, forward);
-	float scale = 0.008f;
+	float scale = 0.08f;
 	if(key == 'W')
 	{
 		eye += scale * forward;

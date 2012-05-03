@@ -5,11 +5,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lightway", "lightway\lightw
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Analysis|Win32 = Analysis|Win32
 		Debug|Win32 = Debug|Win32
 		LWFast|Win32 = LWFast|Win32
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{147BCFB3-ED74-4333-92ED-EB7033B39EBC}.Analysis|Win32.ActiveCfg = Analysis|Win32
+		{147BCFB3-ED74-4333-92ED-EB7033B39EBC}.Analysis|Win32.Build.0 = Analysis|Win32
 		{147BCFB3-ED74-4333-92ED-EB7033B39EBC}.Debug|Win32.ActiveCfg = Debug|Win32
 		{147BCFB3-ED74-4333-92ED-EB7033B39EBC}.Debug|Win32.Build.0 = Debug|Win32
 		{147BCFB3-ED74-4333-92ED-EB7033B39EBC}.LWFast|Win32.ActiveCfg = LWFast|Win32

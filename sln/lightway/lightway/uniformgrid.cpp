@@ -89,8 +89,6 @@ bool UniformGrid::dda_next(const float3& t_delta, const float3& step, const int3
 			target_t_max.z += t_delta.z;
 		}
 	}
-	// TODO : do this and finish
-	// HACK 
 	else
 	{
 		//y or z smallest
@@ -117,12 +115,12 @@ bool UniformGrid::dda_next(const float3& t_delta, const float3& step, const int3
 	return true;
 }
 const float MIN_INTERSECTION_T = 0.000001f;
-bool UniformGrid::intersect(const Ray& ray, Intersection* intersection, bool flip_ray, bool verbose) const
+bool UniformGrid::intersect(const IntersectionQuery& query, Intersection* intersection) const
 {
 	float3 t_delta, step, t_max;
 	int3 cellid;
 	int3 outcell;
-	bool hit = dda_vals(ray, &t_delta, &step, &t_max, &cellid, &outcell);
+	bool hit = dda_vals(query.ray, &t_delta, &step, &t_max, &cellid, &outcell);
 	if(!hit) return false;
 	float dummy;
 	do
@@ -146,9 +144,10 @@ bool UniformGrid::intersect(const Ray& ray, Intersection* intersection, bool fli
 			for(int tri_i = 0; tri_i < voxel->count; tri_i++)
 			{
 				Intersection tri_intersection;
-				ray.intersect_with_triangles(&tris[tri_i], 1, &tri_intersection, flip_ray);
+				query.ray.intersect_with_triangles(&tris[tri_i], 1, &tri_intersection, query.flipRay);
 				//MIN_INTERSECTION_T is for numerical instabilitiies when we're really close
-				if(tri_intersection.hit && tri_intersection.t < closest_intersection.t && (tri_intersection.t > MIN_INTERSECTION_T))
+				if(tri_intersection.hit && tri_intersection.t < closest_intersection.t &&
+					query.isValid(tri_intersection))
 				{
 					
 		//lwassert_notequal(tri_intersection.normal, float3(0));
@@ -159,7 +158,8 @@ bool UniformGrid::intersect(const Ray& ray, Intersection* intersection, bool fli
 			}
 			
 			//min(tmax.x, .y, .z) = prevent us from covering tris in the next voxels
-			float voxel_max_t = glm::min(t_max.x, t_max.y, t_max.z);
+			//without the epsilon there, if a tri lies on a voxel boundary, it may or may not intersect ever
+			float voxel_max_t = glm::min(t_max.x, t_max.y, t_max.z) + 0.0001;
 
 			//no hit -> closest_t = INF
 			//this code fails if voxel_max_t is infinitely large...

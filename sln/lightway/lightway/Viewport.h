@@ -3,12 +3,11 @@
 #include "lightway.h"
 #include "debug.h"
 #include <QtGui/QApplication>
-#include <QThread>
 #include <QtOpenGL>
 #include <cstdio>
 #include <iostream>
 #include <list>
-#include "RayTracer.h"
+#include "RenderCore.h"
 #include <functional>
 using namespace std;
 #define INVALID_TEXTURE 1000000
@@ -18,9 +17,13 @@ class Viewport : public QGLWidget
 {
 	Q_OBJECT
 public:
-	Viewport() : texture_(INVALID_TEXTURE), rayTracer(nullptr) 
+	Viewport(QWidget* parent = nullptr) : QGLWidget(parent), texture_(INVALID_TEXTURE), renderCore(nullptr) 
 	{ 		
 		setFocusPolicy(Qt::ClickFocus);
+		QTimer* timer = new QTimer();
+		timer->setSingleShot(false);
+		connect(timer, SIGNAL(timeout()), this, SLOT(update()));
+		timer->start(150);
 	}
     void glInit()
     {        
@@ -28,6 +31,7 @@ public:
     	glDisable(GL_DEPTH_TEST); GLE;
     	glDisable(GL_CULL_FACE); GLE;
     	glEnable( GL_TEXTURE_2D ); GLE;		
+
 	}
 
 	void drawFramebuffer(const float4* rgbFb)
@@ -93,7 +97,7 @@ public:
 	}
 	void resizeEvent ( QResizeEvent * event )
 	{
-		rayTracer->camera.stateIdx++;
+		renderCore->resize(int2(width(), height()));
 	}
 	void resizeGL(int nw, int nh)
 	{
@@ -103,8 +107,7 @@ public:
 		glMatrixMode(GL_MODELVIEW); GLE;
 		glLoadIdentity(); GLE;
 	}
-	RayTracer* rayTracer;
-	vector<RenderSlave*>* slaves;
+	RenderCore* renderCore;
 	QPoint selectedPoint;
 protected:
 	
@@ -119,9 +122,9 @@ protected:
     	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); GLE;
 			
 		glViewport(0, 0, width(), height()); GLE;
-		if(rayTracer != nullptr)
+		if(renderCore != nullptr)
 		{
-			drawFramebuffer(rayTracer->linear_fb);
+			drawFramebuffer(renderCore->linear_fb);
 		}
 			
 		painter.endNativePainting();
@@ -131,26 +134,28 @@ protected:
 		painter.drawLine(selectedPoint - QPoint(0, 5), selectedPoint + QPoint(0, 5));
 		
 		painter.end();
-		
-		update();
 	}
 	virtual void keyPressEvent(QKeyEvent* evt) 
 	{
 		if(evt->key() == Qt::Key_W)
 		{
-			rayTracer->camera.on_keyboard_event('W');
+			renderCore->camera.on_keyboard_event('W');
+			renderCore->clear();
 		}
 		else if(evt->key() == Qt::Key_A)
 		{
-			rayTracer->camera.on_keyboard_event('A');
+			renderCore->camera.on_keyboard_event('A');
+			renderCore->clear();
 		}
 		else if(evt->key() == Qt::Key_S)
 		{
-			rayTracer->camera.on_keyboard_event('S');
+			renderCore->camera.on_keyboard_event('S');
+			renderCore->clear();
 		}
 		else if(evt->key() == Qt::Key_D)
 		{
-			rayTracer->camera.on_keyboard_event('D');
+			renderCore->camera.on_keyboard_event('D');
+			renderCore->clear();
 		}
 	}
 	virtual void mousePressEvent(QMouseEvent* evt)
@@ -159,6 +164,7 @@ protected:
 		{
 			selectedPoint = evt->pos();
 			selectedPoint.setY(height() - selectedPoint.y());
+			renderCore->clear();
 		}
 	}
 	virtual void mouseMoveEvent(QMouseEvent* evt)
@@ -170,12 +176,13 @@ protected:
 		}
 		if(evt->buttons() == Qt::RightButton)
 		{			
-			rayTracer->camera.on_mouse_move(int2(evt->pos().x(), evt->pos().y()));
+			renderCore->camera.on_mouse_move(int2(evt->pos().x(), evt->pos().y()));
+			renderCore->clear();
 		}
 	}
 	virtual void mouseReleaseEvent(QMouseEvent* evt)
 	{		
-		rayTracer->camera.on_mouse_up();
+		renderCore->camera.on_mouse_up();
 
 	}
 	//this object hiearchy is a giant mess...

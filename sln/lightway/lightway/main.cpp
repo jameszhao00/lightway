@@ -6,25 +6,15 @@
 #include <cstdio>
 #include <iostream>
 #include <list>
-#include <gl/glfw.h>
-#include "RayTracer.h"
-#include "debug.h"
-#include <boost/thread.hpp>
-#include <boost/chrono.hpp>
-#include <functional>
-#define GLFW_CDECL
-#include <AntTweakBar.h>
-using namespace std;
-#define INVALID_TEXTURE 1000000
-
-
+#include "test.h"
 int main(int argc, char *argv[])
 {
+	//testUniformGridAggregate();
 	QApplication a(argc, argv);
 	
 	Lightway w;
 	w.show();
-
+	w.startRendering();
 	
 	return a.exec();
 }
