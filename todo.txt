@@ -1,13 +1,15 @@
 TODO:
 
+- there's no ambient occlusion like effect in the creases! (maybe spec power's too high?)
+
+- don't think my understanding of MIS is correct
+	- can we just * the direct value by 2?
+
+- see if brdf sampling converged to light sampling!
+
 - work on floating point precision issues
 	- intersections
 	- brdf
-
-
-- test Debug mode with ICC/FP:Fast
-
-- see if the fireflies are caused by area light's inverse distance squared thing
 
 - think the specular issue is the direct light wi/wos aren't in zup coordsys
 
@@ -25,6 +27,11 @@ TODO:
 
 DONE:
 
+- test Debug mode with ICC/FP:Fast
+	- only b/w if optimization turned on along with fast
+
+- see if the fireflies are caused by area light's inverse distance squared thing
+	- no visible diff
 
 - fixed: the uniform grid thing is broken (try 30 subdivisions)
 	- try 3 / 7 / 11 / 13 etc... not perfectly divisible stuff and see what happens

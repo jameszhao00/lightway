@@ -18,34 +18,6 @@ struct ___Brdf
 	//everything is z-up
 };
 */
-namespace zup // z up
-{
-	inline float cos_theta(const float3& v) { return v.z; }
-	inline float abs_cos_theta(const float3& v) { return glm::abs(cos_theta(v)); }
-
-	inline float sin_theta2(const float3& v) { return 1.0f - v.z * v.z; }
-	inline float sin_theta(const float3& v) 
-	{ 
-		lwassert_validvec(v);
-		float temp = sin_theta2(v);
-		LWASSERT_VALIDFLOAT(temp);
-		if (temp <= 0.0f) return 0.0f;
-		else return std::sqrt(temp);
-	}	
-	inline float3 sph2cart(float sintheta, float costheta, float phi)
-	{
-		LWASSERT_VALIDFLOAT(sintheta);
-		LWASSERT_VALIDFLOAT(costheta);
-		LWASSERT_VALIDFLOAT(phi);
-		return float3(sintheta * cos(phi), sintheta * sin(phi), costheta);
-	}
-	inline bool same_hemi(const float3& a, const float3& b)
-	{
-		lwassert_validvec(a);
-		lwassert_validvec(b);
-		return a.z * b.z > 0;
-	}
-};
 struct Fresnel
 {	
 	float3 f0;

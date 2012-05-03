@@ -40,7 +40,7 @@ int closest_intersection(const Intersection* intersections, int num_intersection
     return closest_i;    
 }
 
-Camera::Camera() : stateIdx(0), fovy(45), zn(1), zf(300), eye(float3(2, 1, 0)), 
+Camera::Camera() : stateIdx(0), fovy(45), zn(1), zf(300), eye(float3(2, 0, 0)), 
 	forward(float3(-1, 0, 0)), up(float3(0, 1, 0)), mouse_pos(int2(-1, -1))
 {
 	forward = normalize(-eye);

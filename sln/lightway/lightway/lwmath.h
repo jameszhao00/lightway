@@ -58,15 +58,29 @@ inline bool equal(float a, float b, float epsilon)
 	return abs(a-b) < epsilon;
 }
 
-/*
-#include <Eigen/Dense>
+namespace zup // z up
+{
+	inline float cos_theta(const float3& v) { return v.z; }
+	inline float abs_cos_theta(const float3& v) { return glm::abs(cos_theta(v)); }
 
-using namespace Eigen;
-float3 toGlm(Vector3f v)
+	inline float sin_theta2(const float3& v) { return 1.0f - v.z * v.z; }
+	inline float sin_theta(const float3& v) 
+	{ 
+		float temp = sin_theta2(v);
+		if (temp <= 0.0f) return 0.0f;
+		else return std::sqrt(temp);
+	}	
+	inline float3 sph2cart(float sintheta, float costheta, float phi)
+	{
+		return float3(sintheta * cos(phi), sintheta * sin(phi), costheta);
+	}
+	inline bool same_hemi(const float3& a, const float3& b)
+	{
+		return a.z * b.z > 0;
+	}
+};
+
+inline float luminance(float3 rgb)
 {
-	return float3(v.x(), v.y(), v.z());
+	 return glm::dot(float3(0.2126, 0.7152, 0.0722), rgb);
 }
-Vector3f toEigen(float3 v)
-{
-	return Vector3f(v.x, v.y, v.z);
-}*/

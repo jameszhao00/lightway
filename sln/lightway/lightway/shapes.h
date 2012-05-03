@@ -68,7 +68,7 @@ struct Ray
 
 struct IntersectionQuery
 {
-	IntersectionQuery(const Ray& pRay, bool pFlipRay, float pMaxT = INF, float pMinT = 0.001f, float pMinCosTheta = 0.001f) :	
+	IntersectionQuery(const Ray& pRay, bool pFlipRay, float pMaxT = INF, float pMinT = 0.00001f, float pMinCosTheta = 0.00001f) :	
 		ray(pRay), flipRay(pFlipRay), maxT(pMaxT), minT(pMinT), minCosTheta(pMinCosTheta) 
 	{
 	}

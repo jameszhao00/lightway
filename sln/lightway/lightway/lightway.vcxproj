@@ -198,6 +198,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AreaLight.cpp" />
+    <ClInclude Include="AreaLight.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
     <ClCompile Include="asset.cpp" />
     <ClCompile Include="GeneratedFiles\Analysis\moc_lightway.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>

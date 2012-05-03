@@ -1,12 +1,9 @@
 #include "stdafx.h"
 #include "RenderCore.h"
-#include "debug.h"
 #include "bxdf.h"
 #include "shapes.h"
 #include <glm/ext.hpp>
 #include <iostream>
-
-//returns -1 if doesn't intersect
 
 bool closest_intersect_ray_scene(const RTScene& scene, const IntersectionQuery& query, Intersection* intersection)
 {
@@ -14,7 +11,8 @@ bool closest_intersect_ray_scene(const RTScene& scene, const IntersectionQuery& 
 	bool scene_hit = scene.accl->intersect(query, &scene_intersection);
 
 	Intersection light_intersection;
-	bool light_hit = scene.area_lights[0].intersect(query.ray, &light_intersection, query.flipRay);
+	//bool light_hit = scene.area_lights[0].intersect(query.ray, &light_intersection, query.flipRay);
+	bool light_hit = scene.area_lights[0].intersect(query, &light_intersection);
 	//make sure the light hit is valid
 	light_hit = light_hit && query.isValid(light_intersection);
 	if(scene_hit && light_hit)
@@ -55,6 +53,125 @@ void axisConversions(const float3& normal, float3x3* zUpToWorld, float3x3* world
 	}
 	*worldToZUp = glm::transpose(*zUpToWorld);	
 }
+//always samples according to the light. 
+//the MIS version combines light sampling with brdf sampling
+float3 directLight(Rand& rand, const RTScene& scene, const Intersection& pt, const float3x3& worldToZUp, const float3& wo)
+{
+	float3 lightPos;
+	float3 wiDirectWorld;
+	float lightPdf;	
+	float lightT;
+
+	scene.area_lights[0].sample(rand, pt.position, &lightPos, &wiDirectWorld, &lightPdf, &lightT);
+
+	Ray shadow_ray(pt.position, wiDirectWorld);
+	IntersectionQuery shadowQuery(shadow_ray, true);
+	Intersection occluderIntersection;
+	bool occluderHit = scene.accl->intersect(shadowQuery, &occluderIntersection);
+		
+	//light has to be facing the surface
+	//-wiDirectWorld . lightNormal > 0
+	//wiDirectWorld . normal > 0
+	bool lightFacingSurface = 
+		(dot(-wiDirectWorld, scene.area_lights[0].normal) > 0) &&
+		(dot(wiDirectWorld, pt.normal) > 0);
+	bool unoccluded = !occluderHit || (lightT < occluderIntersection.t);
+	if(unoccluded && lightFacingSurface)
+	{		
+		float3 wiDirect = worldToZUp * wiDirectWorld;
+		float3 brdfEval = pt.material->fresnelBlend.eval(wiDirect, wo);
+		//float3 brdfEval = closest.material->fresnelBlend.lambertBrdf.eval();
+		float3 ndotl = float3(dot(pt.normal, wiDirectWorld) );
+		lwassert_greater(ndotl.x, 0);
+		float3 le = scene.area_lights[0].material->emission;
+			
+		float3 direct = le * brdfEval * ndotl / lightPdf;
+		return direct;
+	}	
+	return float3(0);
+}
+
+float3 directLightMis(Rand& rand, const RTScene& scene, const Intersection& pt, const float3x3& worldToZUp, 
+	const float3x3& zUpWoWorld, const float3& wo)
+{
+	bool sampleLight = rand.next01() > 0.5;
+	auto & light = scene.area_lights[0];
+	float lightPdf;
+	float brdfPdf;
+	float3 wiDirectWorld;
+	float lightT;
+	float3 wiDirect; //only initally valid if we sampled the brdf
+	if(sampleLight)
+	{
+		//sample light
+		float3 lightPos;
+		light.sample(rand, pt.position, &lightPos, &wiDirectWorld, &lightPdf, &lightT);
+	}
+	else
+	{
+		//sample brdf
+		float3 weight;
+		pt.material->fresnelBlend.sample(wo, float2(rand.next01(), rand.next01()), &wiDirect, &weight);
+		brdfPdf = pt.material->fresnelBlend.pdf(wiDirect, wo);
+		wiDirectWorld = zUpWoWorld * wiDirect;
+	}
+	//wiDirectWorld is now set
+
+	//see if the light is occluded
+	//first, intersect with the world
+	Ray shadowRay(pt.position, wiDirectWorld);
+	IntersectionQuery shadowQuery(shadowRay, true);	
+	Intersection occluderIntersection;
+	bool hitOccluder = scene.accl->intersect(shadowQuery, &occluderIntersection);	
+	bool hitLight = sampleLight; //if we sampled the light, we know we hit it!
+	if(!sampleLight)
+	{
+		//only intersect with light if we brdf sampled (didn't light sample)
+		shadowQuery.flipRay = false; //flip back (originally flipped)
+		Intersection lightIntersection;
+		hitLight = light.intersect(shadowQuery, &lightIntersection);		
+		lightT = lightIntersection.t;
+	}
+	if(!hitLight) 
+	{
+		return float3(0);
+	}
+	//we know we hit the light now...
+	
+	//lightT is now set
+	bool unoccluded = !hitOccluder || lightT < occluderIntersection.t;
+	bool lightFacingSurface = 
+		(dot(wiDirectWorld, -light.normal) > 0) && //light intersection should skip this... but??
+		(dot(wiDirectWorld, pt.normal) > 0); //can happen if we sample light and it's partially behind us
+	if(!(unoccluded && lightFacingSurface))
+	{
+		//we missed the light, or we're in shadow, or we're not facing it
+		return float3(0);
+	}
+	//if unoccluded, combine the two
+	if(sampleLight)
+	{		
+		//get brdf pdf
+		wiDirect = worldToZUp * wiDirectWorld;
+		brdfPdf = pt.material->fresnelBlend.pdf(wiDirect, wo);
+	}
+	else
+	{
+		//get light pdf
+		lightPdf = light.pdf(wiDirectWorld, lightT);
+	}
+	//wiDirect is now all set
+	//eval the brdf
+	float3 brdfEval = pt.material->fresnelBlend.eval(wiDirect, wo);
+	float3 cosTheta = float3(dot(pt.normal, wiDirectWorld));
+	float3 le = light.material->emission;
+	//balanced heuristic - fPdf / (fPdf + gPdf) * fPdf simplifies to 1/(fPdf + gPdf)
+	lwassert_validfloat(lightPdf);
+	lwassert_validfloat(brdfPdf);
+	lwassert_greater(lightPdf, 0);
+	lwassert_greater(brdfPdf, 0);
+	return float3(2) * le * brdfEval * cosTheta / (lightPdf + brdfPdf);
+}
 const int RANDOM_TERMINATION_DEPTH = 3;
 const int RT_MAX_DEPTH = 8;
 void RenderCore::processSample(Rand& rand, Sample* sample)
@@ -70,9 +187,7 @@ void RenderCore::processSample(Rand& rand, Sample* sample)
 	
 	if(sample->depth > RANDOM_TERMINATION_DEPTH)
 	{
-		//green ~ luminosity
-		float3 originalThroughput = sample->throughput;
-		float survival = sample->throughput.y;
+		float survival = glm::min(luminance(sample->throughput), 0.5f);
 		if(rand.next01() > survival)
 		{
 			sample->finished = true;
@@ -106,47 +221,8 @@ void RenderCore::processSample(Rand& rand, Sample* sample)
 		
 	float3 wo = worldToZUp * -sample->ray.dir;
 	//update radiance with direct light
-	{
-		float3 lightPos;
-		float3 wiDirectWorld;
-		float lightPdf;	
-		float lightT;
-		float brdfPdf;
-
-			scene->area_lights[0].sample(rand, closest.position, &lightPos, &wiDirectWorld, &lightPdf, &lightT);
-
-		Ray shadow_ray(closest.position, wiDirectWorld);
-		IntersectionQuery shadowQuery(shadow_ray, true);
-		Intersection occluderIntersection;
-		bool occluderHit = scene->accl->intersect(shadowQuery, &occluderIntersection);
-		
-		//light has to be facing the surface
-		//-wiDirectWorld . lightNormal > 0
-		//wiDirectWorld . normal > 0
-		bool lightFacingSurface = 
-			(dot(-wiDirectWorld, scene->area_lights[0].normal) > 0) &&
-			(dot(wiDirectWorld, closest.normal) > 0);
-		bool unoccluded = !occluderHit || (lightT < occluderIntersection.t);
-		if(unoccluded && lightFacingSurface)
-		{		
-			float3 wiDirect = worldToZUp * wiDirectWorld;
-			float3 brdfEval = closest.material->fresnelBlend.eval(wiDirect, wo);
-			//float3 brdfEval = closest.material->fresnelBlend.lambertBrdf.eval();
-			float3 ndotl = float3(dot(closest.normal, wiDirectWorld) );
-			lwassert_greater(ndotl.x, 0);
-			float3 le = scene->area_lights[0].material->emission;
-			
-			float3 direct = le * brdfEval * ndotl / lightPdf;
-
-			sd.shr.record(sample->xy, sample->depth, "Rad before Direct", sample->radiance);
-		
-			sample->radiance += sample->throughput * direct;
-			sd.shr.record(sample->xy, sample->depth, "Rad after Direct", sample->radiance);
-			sd.shr.record(sample->xy, sample->depth, "Direct Rad", direct);
-			sd.shr.record(sample->xy, sample->depth, "Direct Rad * T", sample->throughput * direct);
-
-		}	
-	}
+	//sample->radiance += sample->throughput * directLight(rand, *scene, closest, worldToZUp, wo);
+	sample->radiance += sample->throughput * directLightMis(rand, *scene, closest, worldToZUp, zUpToWorld, wo);
 	//update ray/throughput with brdf	
 	{
 		float3 weight;			
@@ -209,7 +285,6 @@ int RenderCore::step(Rand& rand, int groupIdx)
 			}
 				
 			float2 pixel_pos(j, i);			
-			//no randomized jittering for now
 			float2 sample_pos = pixel_pos + float2(rand.next01(), rand.next01());					
 			float4 ndc((sample_pos.x/size_.x-0.5)*2, (sample_pos.y/size_.y-0.5)*2, 1, 1);
 			float4 d_comp = inv_proj * ndc;
@@ -298,8 +373,11 @@ void RenderCore::stopWorkThreads()
 void RenderCore::workThread(int groupIdx)
 {
 	Rand rand;
+	int iteration = 0;
 	while(!stopSignal_)
 	{
 		step(rand, groupIdx);
+		iteration++;
+		cout << "group: " << groupIdx << " iteration:" << iteration << endl;
 	}
 }

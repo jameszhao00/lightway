@@ -4,6 +4,7 @@
 
 void test_rectangular_area_lights()
 {
+	/*
 	Rand rand;
 	for(int i = 0; i < 1000; i++)
 	{
@@ -34,4 +35,5 @@ void test_rectangular_area_lights()
 			}
 		}		
 	}
+	*/
 }

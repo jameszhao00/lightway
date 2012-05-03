@@ -1,7 +1,6 @@
 #pragma once
 #include "stdafx.h"
 #include "lightway.h"
-#include "debug.h"
 #include <QtGui/QApplication>
 #include <QtOpenGL>
 #include <cstdio>
@@ -9,10 +8,22 @@
 #include <list>
 #include "RenderCore.h"
 #include <functional>
+#include <GL/GLU.h>
 using namespace std;
 #define INVALID_TEXTURE 1000000
 
-#include "renderslave.h"
+static void report_gl_error(const char* file, int line_number)
+{
+	GLenum error = glGetError();
+	if(error != GL_NO_ERROR)
+	{
+		printf("ERROR: OGL (%s@%d) : %s\n", file, line_number,
+			gluErrorString(error));
+	}
+}
+
+#define GLE report_gl_error(__FILE__, __LINE__)
+
 class Viewport : public QGLWidget
 {
 	Q_OBJECT
@@ -23,7 +34,7 @@ public:
 		QTimer* timer = new QTimer();
 		timer->setSingleShot(false);
 		connect(timer, SIGNAL(timeout()), this, SLOT(update()));
-		timer->start(150);
+		timer->start(1500);
 	}
     void glInit()
     {        
