@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "AreaLight.h"
+#include "shapes.h"
+#include "bxdf.h"
 
 float3 RectangularAreaLight::samplePoint(Rand& rand) const
 {
@@ -56,10 +58,47 @@ bool RectangularAreaLight::intersect(const IntersectionQuery& query, Intersectio
 	if((dot(normalize(pt - corners[3]), normalize(corners[0] - corners[3]))) < -IN_RECT_ANGLE_EPSILON) return false;
 
 	intersection->hit = true;
-	intersection->material = material;
+	intersection->material = &material;
 	intersection->normal = (normal);
 	intersection->position = pt;
 	intersection->t = d;
 	intersection->lightIdx = idx;
 	return true;
 } 
+
+RectangularAreaLight createDefaultLight()
+{	
+	RectangularAreaLight light;
+	float3 base(.5, .5, 0);
+		
+	float3 light_verts[] = {
+		float3(-.125, .3, -.125),
+		float3(-.125,.3, .125),
+		float3(.125, .3, .125),
+		float3(.125, .3, -.125)
+	};
+		
+	/*
+	float3 light_verts[] = {
+		base + float3(0, .025, .025),
+		base + float3(0, .025, -.025),
+		base + float3(0, -.025, -.025),
+		base + float3(0, -.025, .025)
+	};
+		
+	float3 light_verts[] = {
+		base + float3(-1, 3, 1),
+		base + float3(-1, 3, -1),
+		base + float3(1, 3, -1),
+		base + float3(1, 3, 1)
+	};*/
+	
+    light.corners[0] = light_verts[0];//float3(-1, 39.5, -1);
+    light.corners[1] = light_verts[1];//float3(1, 39.5, -1);
+    light.corners[2] = light_verts[2];//float3(1, 39.5, 1);
+    light.corners[3] = light_verts[3];//float3(-1, 39.5, 1);
+    light.normal = float3(0, -1, 0);
+	
+	light.material.emission = float3(1);
+	return light;
+}

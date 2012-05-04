@@ -6,7 +6,11 @@
 #include "bxdf.h"
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
-#include <AntTweakBar.h>
+
+#include "scene.h"
+#include "AreaLight.h"
+#include <rtcore.h>
+
 using namespace std;
 struct Vertex
 {
@@ -14,11 +18,6 @@ struct Vertex
 	float3 position;
 	float3 normal;
 	float2 uv;
-};
-struct Material
-{	
-	FresnelBlendBrdf fresnelBlend;
-	float3 emission;
 };
 struct Triangle
 {
@@ -51,3 +50,21 @@ struct StaticScene
 	vector<Triangle> triangles;
 	vector<unique_ptr<Material>> materials;
 };
+struct IntersectionQuery;
+struct AccelScene
+{
+	AccelScene() { }
+	AccelScene(const AccelScene& other) 
+	{
+	}
+	embree::Ref<embree::Intersector> intersector;
+	RectangularAreaLight lights[1];
+	const RectangularAreaLight* light(int lightIdx) const
+	{
+		return &lights[lightIdx];
+	}
+	Intersection intersect(const IntersectionQuery& query) const;
+	
+	const StaticScene* data;
+};
+std::unique_ptr<AccelScene> makeAccelScene(const StaticScene* scene);

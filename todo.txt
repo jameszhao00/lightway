@@ -1,4 +1,20 @@
+bugs in the tranditional render
+- light intersection's failing at the moment...
+
+bugs in bidirectional
+- inverse distance squared doesn't seem right...
+- the path lenghts do always add up to <= 1
+- is dividing by hemispheric pdf in the createLightPath correct?
+- russian roulette not the issue...
+- too bright
+	the 2nd light bounce looks wayy too strong
+- light doesn't seem properly weighted using area
+- significant difference in the image across the y = 0 axis 
+
 TODO:
+
+- Bidirectional
+	- change light pdf to be w.r.t. area
 
 - change initial MIS to be light only
 

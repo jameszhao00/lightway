@@ -245,3 +245,9 @@ struct FresnelBlendBrdf
 	LambertBrdf lambertBrdf;
 	Fresnel fresnel;
 };
+
+struct Material
+{	
+	FresnelBlendBrdf fresnelBlend;
+	float3 emission;
+};

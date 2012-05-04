@@ -34,7 +34,7 @@ public:
 		QTimer* timer = new QTimer();
 		timer->setSingleShot(false);
 		connect(timer, SIGNAL(timeout()), this, SLOT(update()));
-		timer->start(1500);
+		timer->start(150);
 	}
     void glInit()
     {        

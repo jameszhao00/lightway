@@ -8,6 +8,7 @@
 #include "uniformgrid.h"
 #include "SampleHistoryRecorder.h"
 #include "AreaLight.h"
+#include "scene.h"
 const int num_spheres = 2;
 const int num_discs = 1;
 const int num_lights = 1;
@@ -44,12 +45,11 @@ struct RTScene
         area_lights[0].corners[2] = light_verts[2];//float3(1, 39.5, 1);
         area_lights[0].corners[3] = light_verts[3];//float3(-1, 39.5, 1);
         area_lights[0].normal = float3(0, -1, 0);
-		light_material.emission = float3(8);
-		area_lights[0].material = &light_material;
+		area_lights[0].material.emission = float3(1);
 	}
 	void make_accl()
 	{		
-		accl = make_uniform_grid(*(this->scene), int3(30));
+		accl = move(makeAccelScene(scene.get()));// make_uniform_grid(*(this->scene), int3(30));
 	}
 	const RectangularAreaLight* light(int lightIdx)
 	{
@@ -61,7 +61,7 @@ struct RTScene
 	Disc discs[num_discs];
 	Material materials[4];
 	vector<Triangle> triangles;
-	unique_ptr<UniformGrid> accl;
+	unique_ptr<AccelScene> accl;
 	unique_ptr<StaticScene> scene;
 };
 const int FB_CAPACITY = 1024;
@@ -107,10 +107,9 @@ public:
 private:
     RenderCore(const RenderCore& other);
     RenderCore& operator=(const RenderCore& other);
-	void workThread(int groupIdx);
-	
-	void processSample(Rand& rand, Sample* sample);
+	void workThread(int groupIdx);	
 	void processSampleToCompletion(Rand& rand, Sample* sample);
+	void bidirectionallyProcessSampleToCompletion(Rand& rand, Sample* sample);
     int step(Rand& rand, int groupIdx);
 private:
     int2 size_;

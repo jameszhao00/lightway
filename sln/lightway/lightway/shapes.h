@@ -3,6 +3,7 @@
 #include "scene.h"
 struct Intersection;
 struct Material;
+struct Triangle;
 struct Disc
 {
     Disc()// : Disc(float3(DEBUGVAL), float3(DEBUGVAL), DEBUGVAL, (Material*)DEBUGVAL)
@@ -68,8 +69,8 @@ struct Ray
 
 struct IntersectionQuery
 {
-	IntersectionQuery(const Ray& pRay, bool pFlipRay, float pMaxT = INF, float pMinT = 0.00001f, float pMinCosTheta = 0.00001f) :	
-		ray(pRay), flipRay(pFlipRay), maxT(pMaxT), minT(pMinT), minCosTheta(pMinCosTheta) 
+	IntersectionQuery(const Ray& pRay, bool pFlipRay, bool ignoreLights, float pMaxT = INF, float pMinT = 0.00001f, float pMinCosTheta = 0.00001f) :	
+		ray(pRay), flipRay(pFlipRay), maxT(pMaxT), minT(pMinT), minCosTheta(pMinCosTheta), ignoreLights(ignoreLights)
 	{
 	}
 		
@@ -78,6 +79,7 @@ struct IntersectionQuery
 	float minT;
 	float minCosTheta;
 	bool flipRay;
+	bool ignoreLights;
 
 	bool isValid(const Intersection& intersection) const
 	{

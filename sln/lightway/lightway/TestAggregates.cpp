@@ -77,7 +77,7 @@ void testUniformGridAggregate()
 			bool uniformGridHit = false;
 			if(targetIteration == -1 || i == targetIteration) 
 			{
-				IntersectionQuery uniformGridQuery(ray, flipRay);
+				IntersectionQuery uniformGridQuery(ray, flipRay, true);
 				uniformGridHit = uniformGrid->intersect(uniformGridQuery, &uniformGridIsect);
 			}
 			//intersect ray naively

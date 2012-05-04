@@ -91,6 +91,7 @@ inline void axisConversions(const float3& normal, float3x3* zUpToWorld, float3x3
 	//hopefully we can collapse this..
 	if(normal.x == 0 && normal.y == 0 && normal.z == 1)
 	{
+		*zUpToWorld = float3x3();
 		//do nothing
 	}
 	else if(normal.x == 0 && normal.y == 0 && normal.z == -1)	
@@ -106,4 +107,20 @@ inline void axisConversions(const float3& normal, float3x3* zUpToWorld, float3x3
 		*zUpToWorld = float3x3(glm::rotate(glm::degrees(rotangle), rotaxis));
 	}
 	*worldToZUp = glm::transpose(*zUpToWorld);	
+}
+inline float3 sampleCosineWeightedHemisphere(Rand& rand, float* pdf)
+{
+	float rx = rand.next01(); float ry = rand.next01();
+	float a = sqrt(1 - ry);
+	float3 w = float3(cos(2 * PI * rx) * a, sin(2 * PI * rx) * a, sqrt(ry));
+	*pdf = INV_PI * zup::cos_theta(w);
+	return w;
+}
+
+inline float3 sampleHemisphere(Rand& rand)
+{
+	float rx = rand.next01(); float ry = rand.next01();
+	float a = sqrt(1 - ry * ry);
+	float3 w = float3(cos(2 * PI * rx) * a, sin(2 * PI * rx) * a, ry);
+	return w;
 }

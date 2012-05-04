@@ -5,6 +5,7 @@
 #include "rendering.h"
 #include <glm/ext.hpp>
 
+
 UniformGrid::UniformGrid(int3 p_subdivisions, const AABB& p_aabb)
 	: subdivisions(p_subdivisions), 
 	aabb(p_aabb),
