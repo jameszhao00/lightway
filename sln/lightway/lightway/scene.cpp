@@ -6,41 +6,34 @@ embree::Vec3f toEmbree(float3 v)
 {
 	return embree::Vec3f(v.x, v.y, v.z);
 }
-Intersection AccelScene::intersect(const IntersectionQuery& query) const
+void AccelScene::intersect(const IntersectionQuery& query,
+	Intersection* sceneIsect,
+	Intersection* lightIsect) const
 {
-	embree::Ray ray(toEmbree(query.ray.origin), toEmbree(query.ray.dir), query.minT, query.maxT);
-	embree::Hit sceneHit;
-	intersector->intersect(ray, sceneHit);
-	
-	Intersection lightIsect;
-	bool hitLight = false;
-	if(!query.ignoreLights)
+	if(sceneIsect != nullptr)
 	{
-		hitLight = lights[0].intersect(query, &lightIsect);
+		sceneIsect->hit = false;	
+		embree::Ray ray(toEmbree(query.ray.origin), toEmbree(query.ray.dir), query.minT, query.maxT);
+		embree::Hit sceneHit;
+		intersector->intersect(ray, sceneHit);
+		if(sceneHit)
+		{
+			int triIdx = sceneHit.id0;
+			const Triangle& tri = data->triangles[triIdx];
+			sceneIsect->t = sceneHit.t;
+			sceneIsect->hit = true;
+			sceneIsect->material = tri.material;
+			sceneIsect->normal = tri.normal;
+			sceneIsect->position = query.ray.at(sceneHit.t);
+			sceneIsect->primitiveId = sceneHit.id0;
+		}
+	}
+	if(lightIsect != nullptr)
+	{
+		lightIsect->hit = false;
+		lights[0].intersect(query, lightIsect);
 		//make sure the light hit is valid
-		hitLight = hitLight && query.isValid(lightIsect);
-	}
-	if(sceneHit && ((!hitLight) || (lightIsect.t > sceneHit.t)))
-	{
-		int triIdx = sceneHit.id0;
-		const Triangle& tri = data->triangles[triIdx];
-		Intersection isect;
-		isect.t = sceneHit.t;
-		isect.hit = true;
-		isect.material = tri.material;
-		isect.normal = tri.normal;
-		isect.position = query.ray.at(sceneHit.t);
-		return isect;		
-	}
-	else if(hitLight)
-	{
-		return lightIsect;
-	}
-	else
-	{
-		Intersection isect;
-		isect.hit = false;
-		return isect;
+		lightIsect->hit = lightIsect->hit && query.isValid(*lightIsect);
 	}
 }
 unique_ptr<AccelScene> makeAccelScene(const StaticScene* scene)

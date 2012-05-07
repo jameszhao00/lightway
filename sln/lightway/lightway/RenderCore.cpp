@@ -5,13 +5,32 @@
 #include <glm/ext.hpp>
 #include <iostream>
 
-
-bool intersectScene(const RTScene& scene, 
-	const IntersectionQuery& query,
-	Intersection* intersection)
+bool hitLightFirst(const Intersection& sceneIsect, const Intersection& lightIsect)
 {
-	*intersection = scene.accl->intersect(query);
-	return intersection->hit;
+	if(!lightIsect.hit) return false;
+	if(!sceneIsect.hit) return true;
+	//both hit
+	if(lightIsect.t < sceneIsect.t) return true;
+	return false;
+}
+bool hitSceneFirst(const Intersection& sceneIsect, const Intersection& lightIsect)
+{
+	if(!sceneIsect.hit) return false;
+	if(!lightIsect.hit) return true;
+	//both hit
+	if(sceneIsect.t < lightIsect.t) return true;
+	return false;
+}
+bool hitNothing(const Intersection& sceneIsect, const Intersection& lightIsect)
+{
+	return !sceneIsect.hit && !lightIsect.hit;
+}
+void intersectScene(const RTScene& scene, 
+	const IntersectionQuery& query, 
+	Intersection* sceneIsect,
+	Intersection* lightIsect)
+{
+	scene.accl->intersect(query, sceneIsect, lightIsect);
 }
 bool facing(const Intersection& isectA, const Intersection& isectB)
 {
@@ -21,7 +40,7 @@ bool facing(const Intersection& isectA, const Intersection& isectB)
 	return true;
 }
 //visibility = facing each other, and not occluded
-bool visibleAndFacing(const Intersection& isectA, const Intersection& isectB, bool ignoreLights, RTScene& scene)
+bool visibleAndFacing(const Intersection& isectA, const Intersection& isectB, RTScene& scene)
 {
 	if(!facing(isectA, isectB))
 	{
@@ -31,21 +50,23 @@ bool visibleAndFacing(const Intersection& isectA, const Intersection& isectB, bo
 	float3 dir = normalize(isectB.position - isectA.position);
 	//now trace the ray...
 	Ray ray(isectA.position, dir);
-	IntersectionQuery query(ray, ignoreLights, false);
-	Intersection actualIsect;
-	float desiredT = glm::length(isectB.position - isectA.position);
-	bool hit = intersectScene(scene, query, &actualIsect);
+	IntersectionQuery query(ray);
+	//float desiredT = glm::length(isectB.position - isectA.position);
+
+	Intersection sceneIsect;
+	intersectScene(scene, query, &sceneIsect, nullptr);
 	//see if we hit isect B
-	if(!hit) return false;
-	if(fabs(actualIsect.t - desiredT) > 0.0001) return false;
+	if(!sceneIsect.hit) return false;
+	//if(fabs(sceneIsect.t - desiredT) > 0.0001) return false;
+	if(sceneIsect.primitiveId != isectB.primitiveId) return false;
 	return true;
 }
 
 float3 directUsingLightSamplingMis(Rand& rand, const RTScene& scene, const Intersection& pt, const float3x3& worldToZUp, 
-	const float3x3& zUpWoWorld, const float3& wo, int* lightIdx)
+	const float3x3& zUpWoWorld, int* lightIdx)
 {
 	auto & light = scene.accl->lights[0];
-	*lightIdx = 0;
+	*lightIdx = -1;
 	float3 lightPos;
 	float3 wiDirectWorld;
 	float lightPdf;
@@ -57,11 +78,13 @@ float3 directUsingLightSamplingMis(Rand& rand, const RTScene& scene, const Inter
 	Ray shadowRay(pt.position, wiDirectWorld);
 	//we cannot ignore the light here, as we need to differentiate b/t hit empty space
 	//and hit light
-	IntersectionQuery shadowQuery(shadowRay, false, false);	
-	Intersection occluderIntersection;
-	bool hitOccluder = intersectScene(scene, shadowQuery, &occluderIntersection);
-	bool hitLight = hitOccluder && occluderIntersection.lightIdx == light.idx;
-	if(!(hitLight && facing(pt, occluderIntersection)))
+	IntersectionQuery shadowQuery(shadowRay);	
+
+	Intersection sceneIsect;
+	Intersection lightIsect;
+	intersectScene(scene, shadowQuery, &sceneIsect, &lightIsect);
+	bool hitLight = hitLightFirst(sceneIsect, lightIsect) && lightIsect.lightIdx == light.idx;
+	if(!(hitLight && facing(pt, lightIsect)))
 	{
 		//we missed the light, or we're in shadow, or we're not facing it
 		return float3(0, 0, 0);
@@ -71,6 +94,7 @@ float3 directUsingLightSamplingMis(Rand& rand, const RTScene& scene, const Inter
 	float3 brdfEval = pt.material->fresnelBlend.lambertBrdf.eval();//.eval(wiDirect, wo);
 	float3 cosTheta = float3(dot(pt.normal, wiDirectWorld));
 	float3 le = light.material.emission;
+	*lightIdx = lightIsect.lightIdx;
 	//balanced heuristic - fPdf / (fPdf + gPdf) * fPdf simplifies to 1/(fPdf + gPdf)
 	return le * brdfEval * cosTheta / (lightPdf + brdfPdf);
 }
@@ -86,7 +110,40 @@ float3 directUsingBrdfSamplingMis(const RectangularAreaLight& light,
 	//combine
 	return le * brdfEval * cosTheta / (lightPdf + brdfPdf);
 }
+float3 directLight(Rand& rand, const RTScene& scene, const Intersection& pt, const float3x3& worldToZUp, 
+	const float3x3& zUpWoWorld)
+{
+	auto & light = scene.accl->lights[0];
+	float3 lightPos;
+	float lightPdf; 
+	//t is already incorporated into pdf
+	float lightT;
+	float3 wiDirectWorld;
+	//sample the light
+	light.sample(rand, pt.position, &lightPos, &wiDirectWorld, &lightPdf, &lightT);
 
+
+	//see if we're occluded
+	Ray shadowRay(pt.position, wiDirectWorld);
+	//we cannot ignore the light here, as we need to differentiate b/t hit empty space
+	//and hit light
+	IntersectionQuery shadowQuery(shadowRay);	
+	Intersection sceneIsect;
+	Intersection lightIsect;
+	intersectScene(scene, shadowQuery, &sceneIsect, &lightIsect);
+	bool hitLight = hitLightFirst(sceneIsect, lightIsect) 
+		&& lightIsect.lightIdx == light.idx;
+
+	if(hitLight && facing(pt, lightIsect))
+	{
+		float3 wiDirect = worldToZUp * wiDirectWorld;
+		float3 brdfEval = pt.material->fresnelBlend.lambertBrdf.eval();
+		float3 cosTheta = float3(dot(pt.normal, wiDirectWorld));
+		float3 le = light.material.emission;
+		return le * brdfEval * cosTheta / lightPdf;
+	}
+	return float3(0);
+}
 void RenderCore::processSampleToCompletion(Rand& rand, Sample* sample)
 {
 	
@@ -94,65 +151,42 @@ void RenderCore::processSampleToCompletion(Rand& rand, Sample* sample)
 
 	Ray ray = sample->ray;
 	//path trace
-	for(int depth = 0; depth < (maxDepth_ + 1); depth++)
+	for(int depth = 0; depth < (bounces_ + 1); depth++)
 	{		
-		IntersectionQuery sceneIsectQuery(ray, false, false);
-		Intersection isect;
-		bool hitScene = intersectScene(*scene, sceneIsectQuery, &isect);
+		IntersectionQuery sceneIsectQuery(ray);
+		Intersection sceneIsect;
+		Intersection lightIsect;
+		intersectScene(*scene, sceneIsectQuery, &sceneIsect, &lightIsect);
 		//if we happen to hit a light source, add Le and quit
-		if(!hitScene)
+		if(hitNothing(sceneIsect, lightIsect))
 		{
 			sample->radiance += throughput * background;
 			return;
 		}	
-		if(depth == 0 && hitScene && validLightIdx(isect.lightIdx))
+		if(hitLightFirst(sceneIsect, lightIsect) && depth == 0)
 		{
-			sample->radiance = isect.material->emission;
-			return;
-		}	
+			sample->radiance = lightIsect.material->emission;
+		}
+		if(!sceneIsect.hit) return;
 		float3x3 zUpToWorld;
 		float3x3 worldToZUp;
-		axisConversions(isect.normal, &zUpToWorld, &worldToZUp);
+		axisConversions(sceneIsect.normal, &zUpToWorld, &worldToZUp);
 		float3 wo = worldToZUp * -ray.dir;
 		//direct light
 		if((includeDirect_ || depth != 0))
 			//&& ((depth + 1) == debugExclusiveBounce_))
 		{
-			auto & light = scene->accl->lights[0];
-			float3 lightPos;
-			float lightPdf; 
-			//t is already incorporated into pdf
-			float lightT;
-			float3 wiDirectWorld;
-			//sample the light
-			light.sample(rand, isect.position, &lightPos, &wiDirectWorld, &lightPdf, &lightT);
-
-			//see if we're occluded
-			Ray shadowRay(isect.position, wiDirectWorld);
-			//we cannot ignore the light here, as we need to differentiate b/t hit empty space
-			//and hit light
-			IntersectionQuery shadowQuery(shadowRay, false, false);	
-			Intersection occluderIntersection;
-			bool hitOccluder = intersectScene(*scene, shadowQuery, &occluderIntersection);
-			bool hitLight = hitOccluder && occluderIntersection.lightIdx == light.idx;
-			if(hitLight && facing(isect, occluderIntersection))
-			{
-				float3 wiDirect = worldToZUp * wiDirectWorld;
-				float3 brdfEval = isect.material->fresnelBlend.lambertBrdf.eval();
-				float3 cosTheta = float3(dot(isect.normal, wiDirectWorld));
-				float3 le = light.material.emission;
-
-				sample->radiance += throughput * le * brdfEval * cosTheta / lightPdf;
-			}
+			sample->radiance += throughput * directLight(rand, *scene, sceneIsect, worldToZUp, zUpToWorld);
 		}
 		//generate new direction
-		if(depth != maxDepth_) //we're at the last bounce
+		if(depth != bounces_) //we're at the last bounce
 		{
 			float3 wiIndirect; 
 			float3 indirectWeight;
-			isect.material->fresnelBlend.lambertBrdf.sample(float2(rand.next01(), rand.next01()), &wiIndirect, &indirectWeight);
+			sceneIsect.material->fresnelBlend.lambertBrdf.sample(float2(rand.next01(), rand.next01()), 
+				&wiIndirect, &indirectWeight);
 			float3 wiWorld = zUpToWorld * wiIndirect;
-			ray = Ray(isect.position, wiWorld);
+			ray = Ray(sceneIsect.position, wiWorld);
 			throughput *= indirectWeight;
 		}
 	}
@@ -162,75 +196,75 @@ void RenderCore::processSampleToCompletionMis(Rand& rand, Sample* sample)
 	float3 throughput(1);
 
 	Ray woWorldRay;
-	Intersection isect;
-	bool hitScene = false;
-	const float rrStartDepth = glm::min(glm::max(maxDepth_ / 2, 3), 5);
+	Intersection sceneIsect;
+	const float rrStartDepth = glm::min(glm::max(bounces_ / 2, 3), 5);
 	//setup
 	{
 		//intersect with scene
-		IntersectionQuery sceneIsectQuery(sample->ray, false, false);
-		hitScene = intersectScene(*scene, sceneIsectQuery, &isect);
+		IntersectionQuery sceneIsectQuery(sample->ray);
+		Intersection lightIsect;
+		intersectScene(*scene, sceneIsectQuery, &sceneIsect, &lightIsect);
 		//if we happen to hit a light source, add Le and quit
-		if(hitScene && validLightIdx(isect.lightIdx))
+		if(hitLightFirst(sceneIsect, lightIsect))
 		{
-			sample->radiance = isect.material->emission;
+			sample->radiance = lightIsect.material->emission;
 			return;
 		}
 		woWorldRay = sample->ray;
 	}
 	//path trace
-	for(int depth = 0; depth < (maxDepth_ + 1); depth++)
+	for(int depth = 0; depth < (bounces_ + 1); depth++)
 	{		
 		//we need isect, woWorldRay, and hitScene
-
 		//if we didn't hit anything, add background and quit
-		if(!hitScene)
+		if(!sceneIsect.hit)
 		{
 			sample->radiance += throughput * background;
 			return;
-		}		
+		}
 		float3x3 zUpToWorld;
 		float3x3 worldToZUp;
-		axisConversions(isect.normal, &zUpToWorld, &worldToZUp);
+		axisConversions(sceneIsect.normal, &zUpToWorld, &worldToZUp);
 		float3 wo = worldToZUp * -woWorldRay.dir;
 		//add direct light contribution using light sampling
 		int lightIdx;
 		if((includeDirect_ || depth != 0))
 		{
-			sample->radiance += throughput *
-				directUsingLightSamplingMis(rand, *scene, isect, worldToZUp, zUpToWorld, wo, &lightIdx);
+			//sample->radiance += throughput *
+				directUsingLightSamplingMis(rand, *scene, sceneIsect, worldToZUp, zUpToWorld, &lightIdx);
 		}		
 		//sample the brdf
 		float3 weight;
 		float3 wiIndirect;
 		//isect.material->fresnelBlend.sample(wo, float2(rand.next01(), rand.next01()), &wiIndirect, &weight);
-		isect.material->fresnelBlend.lambertBrdf.sample(float2(rand.next01(), rand.next01()), &wiIndirect, &weight);
-		float brdfPdf = isect.material->fresnelBlend.lambertBrdf.pdf(wiIndirect);//, wo);
-		float3 brdfEval = isect.material->fresnelBlend.lambertBrdf.eval();//wiIndirect, wo);
+		sceneIsect.material->fresnelBlend.lambertBrdf.sample(float2(rand.next01(), rand.next01()), &wiIndirect, &weight);
+		float brdfPdf = sceneIsect.material->fresnelBlend.lambertBrdf.pdf(wiIndirect);//, wo);
+		float3 brdfEval = sceneIsect.material->fresnelBlend.lambertBrdf.eval();//wiIndirect, wo);
 		float3 wiWorldIndirect = zUpToWorld * wiIndirect;
 		//don't mul. throughput by weight just yet... we need to add light
 		//intersect with the scene
-		Ray nextWoWorldRay(isect.position, wiWorldIndirect);
-		IntersectionQuery nextSceneIsectQuery(nextWoWorldRay, false, false);
-		Intersection nextIsect;
-		bool nextHitScene = intersectScene(*scene, nextSceneIsectQuery, &nextIsect);
+		Ray nextWoWorldRay(sceneIsect.position, wiWorldIndirect);
+		IntersectionQuery nextSceneIsectQuery(nextWoWorldRay);
+		
+		Intersection nextSceneIsect;
+		Intersection lightIsect;
+		intersectScene(*scene, nextSceneIsectQuery, &nextSceneIsect, &lightIsect);
 		//add direct light contribution from the BRDF sample direction (with MIS)
-		if((includeDirect_ || depth != 0) && nextHitScene && validLightIdx(nextIsect.lightIdx))
+		if((includeDirect_ || depth != 0) && hitLightFirst(nextSceneIsect, lightIsect))
 		{
 			//if we hit a different light, quit... 
 			//should probably change this later on
-			if(lightIdx != nextIsect.lightIdx) return;
-			else
-			{		
+			if(lightIdx == lightIsect.lightIdx)
+			{
 				//add direct light contrib.
 				//TODO: maybe we should mul. throughput by weight...
 				sample->radiance += throughput * 
-					directUsingBrdfSamplingMis(*(scene->light(nextIsect.lightIdx)), nextIsect.t, 
-					wiWorldIndirect, dot(wiWorldIndirect, isect.normal), brdfPdf, brdfEval);
-				//if we did indeed hit a light, quit
-				return;
+					directUsingBrdfSamplingMis(*(scene->light(lightIsect.lightIdx)), lightIsect.t, 
+					wiWorldIndirect, dot(wiWorldIndirect, sceneIsect.normal), brdfPdf, brdfEval);
 			}
 		}
+		//handling 'not hitting scene' done at beginning of loop
+
 		//mul. throughput by brdf weight
 		throughput *= weight;
 		if(depth > rrStartDepth)
@@ -239,15 +273,14 @@ void RenderCore::processSampleToCompletionMis(Rand& rand, Sample* sample)
 			if(rand.next01() > survivalProb) break;
 			else throughput /= survivalProb;//glm::min(survivalProb * 2.f, 1.f);
 		}
-		hitScene = nextHitScene;
-		isect = nextIsect;
+		sceneIsect = nextSceneIsect;
 		woWorldRay = nextWoWorldRay;
 		//todo: implement Russian Roulette here
 	}
 }
 //e.g. if MAX_LIGHT_PATH_DEPTH is 2
 //eye isect[0]/throughput[0] ----throughput[1]---- isect[1] ----throughput[2]---- isect[2]
-const int MAX_LIGHT_PATH_DEPTH = 15;
+const int MAX_LIGHT_PATH_DEPTH = 6;
 
 //returns # of isects
 //PRE CONDITION
@@ -261,7 +294,7 @@ int createLightPath(const RTScene* scene, Rand& rand, Intersection* isects, floa
 {
 	//we start with light isect
 	int isectsN = 1;
-	const float rrStartDepth = glm::min(glm::max(MAX_LIGHT_PATH_DEPTH / 2, 3), 5);
+	//const float rrStartDepth = glm::min(glm::max(MAX_LIGHT_PATH_DEPTH / 2, 3), 5);
 	
 	//pick point on light
 	const RectangularAreaLight* light = scene->light(0);
@@ -287,13 +320,12 @@ int createLightPath(const RTScene* scene, Rand& rand, Intersection* isects, floa
 	for(int depth = 1; depth < (MAX_LIGHT_PATH_DEPTH + 1); depth++)
 	{			
 		Ray ray(pos, woWorldPrev);
-		IntersectionQuery query(ray, true, false);
+		IntersectionQuery query(ray);
 		//check for intersection
 		Intersection sceneIsect;
-		bool hit = intersectScene(*scene, query, &sceneIsect);
-		//terminate if we hit nothing...
-		if(!hit) break;
-		else if(validLightIdx(sceneIsect.lightIdx)) break; //also break if we hit a light
+		intersectScene(*scene, query, &sceneIsect, nullptr);
+		
+		if(!sceneIsect.hit) break; //terminate if we hit nothing...
 		else isectsN++; //otherwise we like this intersection + record it!	 
 
 		if(depth == 1)
@@ -301,12 +333,14 @@ int createLightPath(const RTScene* scene, Rand& rand, Intersection* isects, floa
 			//we cannot use T[0] as that includes area
 			T[1] = light->material.emission * lightCosTheta / lightDirPdf;
 		}
+		/*
 		if(depth > rrStartDepth)
 		{
 			float survivalProb = glm::min(luminance(T[depth]), 0.5f);
 			if(rand.next01() > survivalProb) break;
 			else T[depth] /= survivalProb;
 		}
+		*/
 		if(depth < MAX_LIGHT_PATH_DEPTH)
 		{
 			float3x3 zUpToWorld;
@@ -327,7 +361,7 @@ int createLightPath(const RTScene* scene, Rand& rand, Intersection* isects, floa
 }
 void RenderCore::bidirectionallyProcessSampleToCompletion(Rand& rand, Sample* sample)
 {
-	const float rrStartDepth = glm::min(glm::max(maxDepth_ / 2, 3), 5);
+	//const float rrStartDepth = glm::min(glm::max(maxDepth_ / 2, 3), 5);
 
 	Intersection lightPathIsect[MAX_LIGHT_PATH_DEPTH + 1];
 	//for throughput[i], we don't include the weight at i
@@ -336,32 +370,29 @@ void RenderCore::bidirectionallyProcessSampleToCompletion(Rand& rand, Sample* sa
 	float3 throughput(1);
 	//trace the eye ray 
 	Ray sceneRay = sample->ray;
-	for(int depth = 0; depth < (maxDepth_ + 1); depth++)
+	//float debugWeights[32]; for(int i = 0; i < 32; i++) debugWeights[i] = 0;
+	for(int depth = 0; depth < (bounces_ + 1); depth++)
 	{
 		Intersection sceneIsect;
-
-		IntersectionQuery sceneIsectQuery(sceneRay, false, false);
-		bool hitScene = intersectScene(*scene, sceneIsectQuery, &sceneIsect);
-		//we hit nothing
-		if(!hitScene)
-		{
-			return;
-		}	
+		Intersection lightisect;
+		IntersectionQuery sceneIsectQuery(sceneRay);
+		intersectScene(*scene, sceneIsectQuery, &sceneIsect, &lightisect);
 		//we hit a light
-		if(validLightIdx(sceneIsect.lightIdx))
+		if(hitLightFirst(sceneIsect, lightisect))
 		{
 			if((includeDirect_ || depth != 1))
 				//&& debugExclusiveBounce_ == (depth))
 			{
 				//there's NO shadow ray here! (so not depth + 1 + 1)
 				int pathLength = depth + 1;
-				sample->radiance += (1.f / (pathLength)) * throughput * sceneIsect.material->emission;
+				sample->radiance += (1.f / (pathLength)) * throughput * lightisect.material->emission;
+
 			}
-			break; //if we're at the light, we can't hit anything else...
 		}
-		if(depth == maxDepth_) 
+		if(!sceneIsect.hit) return; //we didn't hit scene
+		if(depth == bounces_) 
 		{
-			//we only came here for the LDE direct connection...
+			//we only came here for the direct connection...
 			break;
 		}
 		float3x3 worldToZUp;
@@ -369,7 +400,7 @@ void RenderCore::bidirectionallyProcessSampleToCompletion(Rand& rand, Sample* sa
 		axisConversions(sceneIsect.normal, &zUpToWorld, &worldToZUp);
 		float3 woEyePath = worldToZUp * -sceneRay.dir;
 		//for a intersection, test visibility with every lightPathIsect
-		for(int lightPathIsectIdx = 0; lightPathIsectIdx < lightPathIsectsN; lightPathIsectIdx++)
+		for(int lightPathIsectIdx = 0; lightPathIsectIdx < (MAX_LIGHT_PATH_DEPTH + 1); lightPathIsectIdx++)
 		{
 			//there's a shadow ray here! (so +1)
 			int pathLength = (lightPathIsectIdx) + (depth + 1) + 1;
@@ -377,8 +408,12 @@ void RenderCore::bidirectionallyProcessSampleToCompletion(Rand& rand, Sample* sa
 			//we lose a variability b/c our first eye path is not removable
 			float bidirectionalWeight = 1.f / (pathLength);
 
+
+			if(pathLength > (bounces_ + 1)) continue;
+			//debugWeights[pathLength] += bidirectionalWeight;
+			//continue;
 			if(//(debugExclusiveBounce_ == pathLength - 1) &&
-				visibleAndFacing(lightPathIsect[lightPathIsectIdx], sceneIsect, true, *scene)
+				visibleAndFacing(lightPathIsect[lightPathIsectIdx], sceneIsect, *scene)
 				&& (includeDirect_ || (depth != 0 || lightPathIsectIdx != 0)))
 			{
 				const auto & lv = lightPathIsect[lightPathIsectIdx];
@@ -417,13 +452,16 @@ void RenderCore::bidirectionallyProcessSampleToCompletion(Rand& rand, Sample* sa
 		//update throughput	
 		throughput *= brdfWeight;
 		//russian roulette
+		/*
 		if(depth > rrStartDepth)
 		{
 			float survivalProb = glm::min(luminance(throughput), 0.5f);
 			if(rand.next01() > survivalProb) break;
 			else throughput /= survivalProb;//glm::min(survivalProb * 2.f, 1.f);
 		}
+		*/
 	}
+	//for(int i = 0; i < 32; i++) cout << "weight [" << i << "] = " << debugWeights[i] << endl;
 }
 int RenderCore::step(Rand& rand, int groupIdx)
 {
@@ -471,22 +509,22 @@ int RenderCore::step(Rand& rand, int groupIdx)
 			
 			sampleDebugger_.shr.newSample(sample.xy);
 			
-			int desiredBounces = 15;
+			int desiredBounces = 0;
 			includeDirect_ = true;
 			debugExclusiveBounce_ = 3;
 			if(1)
 			{
-				maxDepth_ = desiredBounces;
+				bounces_ = desiredBounces;
 				processSampleToCompletionMis(rand, &sample);
 			}
 			else if(0)
 			{
-				maxDepth_ = desiredBounces;
+				bounces_ = desiredBounces;
 				processSampleToCompletion(rand, &sample);
 			}
 			else 
 			{
-				maxDepth_ = desiredBounces + 1;
+				bounces_ = desiredBounces + 1;
 				bidirectionallyProcessSampleToCompletion(rand, &sample);
 			}
 			
@@ -564,7 +602,8 @@ void RenderCore::workThread(int groupIdx)
 	int iteration = 0;
 	auto start = boost::chrono::system_clock::now();
 	while(!stopSignal_)
-		//&& boost::chrono::duration_cast<boost::chrono::milliseconds>(boost::chrono::system_clock::now() - start).count() < 5000)
+		//&& boost::chrono::duration_cast<boost::chrono::milliseconds>(boost::chrono::system_clock::now() - start).
+		//count() < 15000)
 	{
 		step(rand, groupIdx);
 		iteration++;

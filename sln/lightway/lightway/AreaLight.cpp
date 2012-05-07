@@ -42,9 +42,8 @@ const float IN_RECT_ANGLE_EPSILON = 0.00001;
 bool RectangularAreaLight::intersect(const IntersectionQuery& query, Intersection* intersection) const
 {
 	//normally, ray and normal's directions have to be opposite
-	if(dot(float3(query.flipRay ? -1 : 1) * query.ray.dir, normal) > query.minCosTheta) return false;
+	if(dot(query.ray.dir, normal) > -query.minCosTheta) return false;
 	float rdotn = dot(query.ray.dir, normal);
-	if(fabs(rdotn) < query.minCosTheta) return false;
 
 	float d = dot(corners[0] - query.ray.origin, normal) / rdotn;
 
@@ -70,34 +69,28 @@ RectangularAreaLight createDefaultLight()
 {	
 	RectangularAreaLight light;
 	float3 base(.5, .5, 0);
-		
-	float3 light_verts[] = {
-		float3(-.125, .3, -.125),
-		float3(-.125,.3, .125),
-		float3(.125, .3, .125),
-		float3(.125, .3, -.125)
-	};
-		
+	float y = .25;
 	/*
 	float3 light_verts[] = {
-		base + float3(0, .025, .025),
-		base + float3(0, .025, -.025),
-		base + float3(0, -.025, -.025),
-		base + float3(0, -.025, .025)
+		float3(-.125, y, -.125),
+		float3(-.125, y, .125),
+		float3(.125, y, .125),
+		float3(.125, y, -.125)
 	};
-		
+		*/
+
 	float3 light_verts[] = {
-		base + float3(-1, 3, 1),
-		base + float3(-1, 3, -1),
-		base + float3(1, 3, -1),
-		base + float3(1, 3, 1)
-	};*/
+		float3(-.125, y, -.125),
+		float3(-.125, y, .125),
+		float3(.125, y, .125),
+		float3(.125, y, -.125)
+	};
 	
     light.corners[0] = light_verts[0];//float3(-1, 39.5, -1);
     light.corners[1] = light_verts[1];//float3(1, 39.5, -1);
     light.corners[2] = light_verts[2];//float3(1, 39.5, 1);
     light.corners[3] = light_verts[3];//float3(-1, 39.5, 1);
-    light.normal = float3(0, -1, 0);
+    light.normal = float3(0, 1, 0);
 	
 	light.material.emission = float3(6);
 	return light;

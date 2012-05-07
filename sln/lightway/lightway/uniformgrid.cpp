@@ -145,7 +145,7 @@ bool UniformGrid::intersect(const IntersectionQuery& query, Intersection* inters
 			for(int tri_i = 0; tri_i < voxel->count; tri_i++)
 			{
 				Intersection tri_intersection;
-				query.ray.intersect_with_triangles(&tris[tri_i], 1, &tri_intersection, query.flipRay);
+				query.ray.intersect_with_triangles(&tris[tri_i], 1, &tri_intersection);
 				//MIN_INTERSECTION_T is for numerical instabilitiies when we're really close
 				if(tri_intersection.hit && tri_intersection.t < closest_intersection.t &&
 					query.isValid(tri_intersection))

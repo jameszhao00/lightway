@@ -51,6 +51,7 @@ struct StaticScene
 	vector<unique_ptr<Material>> materials;
 };
 struct IntersectionQuery;
+
 struct AccelScene
 {
 	AccelScene() { }
@@ -63,7 +64,9 @@ struct AccelScene
 	{
 		return &lights[lightIdx];
 	}
-	Intersection intersect(const IntersectionQuery& query) const;
+	void intersect(const IntersectionQuery& query,
+		Intersection* sceneIsect,
+		Intersection* lightIsect) const;
 	
 	const StaticScene* data;
 };

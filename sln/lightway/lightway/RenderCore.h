@@ -74,7 +74,7 @@ private:
 	bool stopSignal_;
 	vector<boost::thread> workThreads_;
 	SampleDebugger sampleDebugger_;
-	int maxDepth_;
+	int bounces_;
 	bool includeDirect_;
 	int debugExclusiveBounce_;
 };

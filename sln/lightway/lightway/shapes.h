@@ -62,15 +62,15 @@ struct Ray
 	float3 at(float t) const;
     void intersect_with_discs(const Disc* discs, const int num_discs, Intersection* intersections) const;
     void intersect_with_spheres(const Sphere* spheres, const int num_spheres, Intersection* intersections) const;
-	void intersect_with_triangles(const Triangle* triangles, const int num_tris, Intersection* intersections, bool flip_ray) const;        
+	void intersect_with_triangles(const Triangle* triangles, const int num_tris, Intersection* intersections) const;        
 	
 	bool intersect_with_aabb(const AABB& aabb, float* t, float* t_max_out) const;
 };
 
 struct IntersectionQuery
 {
-	IntersectionQuery(const Ray& pRay, bool pFlipRay, bool ignoreLights, float pMaxT = INF, float pMinT = 0.00001f, float pMinCosTheta = 0.00001f) :	
-		ray(pRay), flipRay(pFlipRay), maxT(pMaxT), minT(pMinT), minCosTheta(pMinCosTheta), ignoreLights(ignoreLights)
+	IntersectionQuery(const Ray& pRay, float pMaxT = INF, float pMinT = 0.00001f, float pMinCosTheta = 0.00001f) :	
+		ray(pRay), maxT(pMaxT), minT(pMinT), minCosTheta(pMinCosTheta)
 	{
 	}
 		
@@ -78,8 +78,6 @@ struct IntersectionQuery
 	float maxT;
 	float minT;
 	float minCosTheta;
-	bool flipRay;
-	bool ignoreLights;
 
 	bool isValid(const Intersection& intersection) const
 	{

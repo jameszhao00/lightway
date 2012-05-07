@@ -26,6 +26,7 @@ struct Intersection
 	float3 position;
 	float3 normal;
 	int lightIdx;
+	int primitiveId;
 	bool hit;
 	const Material* material;
 	float t;

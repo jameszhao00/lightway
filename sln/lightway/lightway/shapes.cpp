@@ -75,8 +75,10 @@ void Ray::intersect_with_spheres(const Sphere* spheres, const int num_spheres, I
 	}
 }
 const float MIN_T = 0.001;
-void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris, Intersection* intersections, bool flip_ray) const
+void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris, Intersection* intersections) const
 {
+	assert(false);
+	/*
 	for(int i = 0; i < num_tris; i++)
 	{
 		intersections[i].hit = false;
@@ -143,6 +145,7 @@ void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris
 			//lwassert_greater(dot(intersections[i].normal, (flip_ray ? dir: -dir)), 0);// > 0);
 		}
 	}
+	*/
 }
 
 bool Ray::intersect_with_aabb(const AABB& aabb, float* t, float* t_max_out) const

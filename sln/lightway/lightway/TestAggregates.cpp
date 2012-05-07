@@ -90,7 +90,7 @@ void testUniformGridAggregate()
 				{
 					Intersection tempIsect;
 					ray.intersect_with_triangles(&originalScene.triangles[triIdx], 
-						1, &tempIsect, flipRay);
+						1, &tempIsect);
 					if(tempIsect.hit && tempIsect.t < hitT)
 					{
 						hitT = tempIsect.t;
