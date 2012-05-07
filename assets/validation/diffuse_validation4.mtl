@@ -1,0 +1,22 @@
+# MTL written from C:\Users\zhaoz3\Documents\lightway\assets\validation\diffuse_validation4.obj
+newmtl green
+Kd 0 1 0
+Ns 256
+d 1
+illum 2
+Ka 0 0 0
+Ks 0 0 0
+newmtl red
+Kd 1 0 0
+Ns 256
+d 1
+illum 2
+Ka 0 0 0
+Ks 0 0 0
+newmtl walls
+Kd 1 1 1
+Ns 256
+d 1
+illum 2
+Ka 0 0 0
+Ks 0 0 0

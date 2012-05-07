@@ -70,9 +70,9 @@
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../../ref/include;C:\Users\zhaoz3\Downloads\boost_1_49_0;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='LWFast|Win32'">C:\Users\zhaoz3\Downloads\embree-1.0\embree-1.0\common;C:\Users\zhaoz3\Downloads\embree-1.0\embree-1.0\rtcore;../../../ref/include;C:\Users\zhaoz3\Downloads\boost_1_49_0;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Users\zhaoz3\Downloads\embree-1.0\embree-1.0\common;C:\Users\zhaoz3\Downloads\embree-1.0\embree-1.0\rtcore;../../../ref/include;C:\Users\zhaoz3\Downloads\boost_1_49_0;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Analysis|Win32'">../../../ref/include;C:\Users\zhaoz3\Downloads\boost_1_49_0;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Analysis|Win32'">C:\Users\zhaoz3\Downloads\embree-1.0\embree-1.0\common;C:\Users\zhaoz3\Downloads\embree-1.0\embree-1.0\rtcore;../../../ref/include;C:\Users\zhaoz3\Downloads\boost_1_49_0;$(IncludePath)</IncludePath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Users\zhaoz3\Downloads\embree-1.0\embree-1.0\Win32\Debug;C:\Users\zhaoz3\Downloads\boost_1_49_0\stage\lib;../../../ref/lib;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Analysis|Win32'">C:\Users\zhaoz3\Downloads\boost_1_49_0\stage\lib;../../../ref/lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Analysis|Win32'">C:\Users\zhaoz3\Downloads\embree-1.0\embree-1.0\Win32\Release;C:\Users\zhaoz3\Downloads\boost_1_49_0\stage\lib;../../../ref/lib;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\Users\zhaoz3\Downloads\boost_1_49_0\stage\lib;../../../ref/lib;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='LWFast|Win32'">C:\Users\zhaoz3\Downloads\embree-1.0\embree-1.0\Win32\Release;C:\Users\zhaoz3\Downloads\boost_1_49_0\stage\lib;../../../ref/lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
@@ -138,7 +138,7 @@
       <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>qtmaind.lib;QtCored4.lib;QtGuid4.lib;glfw.lib;AntTweakBar.lib;opengl32.lib;glu32.lib;assimp.lib;QtOpenGLd4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>qtmaind.lib;QtCored4.lib;QtGuid4.lib;opengl32.lib;glu32.lib;assimp.lib;QtOpenGLd4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -192,6 +192,7 @@
       <Cpp0xSupport>true</Cpp0xSupport>
       <GenerateAlternateCodePaths>AVX</GenerateAlternateCodePaths>
       <UseProcessorExtensions>AVX</UseProcessorExtensions>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>MaxSpeedHighLevel</Optimization>
     </ClCompile>
     <Link>

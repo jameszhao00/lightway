@@ -1,3 +1,22 @@
+stuff worked on:
+- fixing direct lighting
+- broke createLightPath (set T[0] to emission)
+- properly sampling light sources
+- properly account for light transfer across the shadow ray
+
+bidirectiona notes:
+- because unidirectional does direct light sampling,
+	bidirection(rt_depth + 1) = unidirectional(rt_depth)
+- for bidir, we gotta add an additional depth, and only add 'randomly hitting light source' emission
+- 2nd bounce works! yea!
+- when verifying, make sure MAX_LIGHT_DEPTH can support the desired # of bounces
+	- for example, if desiredBouces = 8, MAX_LIGHT_DEPTH = 4 will cut out a lot of light
+
+validation tech.
+- validate direct lighting only b/t bidir and ref
+- validate 1 bounce 
+
+
 bugs in the tranditional render
 - light intersection's failing at the moment...
 
