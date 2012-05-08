@@ -210,6 +210,7 @@
       <FileType>CppCode</FileType>
     </ClInclude>
     <ClCompile Include="asset.cpp" />
+    <ClCompile Include="bxdf.cpp" />
     <ClCompile Include="GeneratedFiles\Analysis\moc_lightway.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LWFast|Win32'">true</ExcludedFromBuild>

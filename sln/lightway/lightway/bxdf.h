@@ -18,6 +18,9 @@ struct ___Brdf
 	//everything is z-up
 };
 */
+
+
+
 struct Fresnel
 {	
 	float3 f0;
@@ -30,7 +33,7 @@ struct Fresnel
 		return float3(0);
 	}
 };
-struct PerfectSpecular
+struct PerfectReflectionBrdf
 {
 	//generate random directions + weight (brdf * cos) / p
 	void sample(const float3& wo, const float2& rand, float3* wi, float3* weight) const
@@ -52,6 +55,11 @@ struct PerfectSpecular
 	{
 		return float3(0);
 	}
+	bool isDelta() const
+	{
+		return true;
+	}
+	float3 specColor;
 	//everything is z-up
 };
 struct BlinnPhongBrdf
@@ -186,6 +194,10 @@ struct LambertBrdf
 	{
 		return albedo * INV_PI_V3;
 	}
+	bool isDelta() const
+	{
+		return false;
+	}
 	float3 albedo;
 };
 struct FresnelBlendBrdf
@@ -246,8 +258,20 @@ struct FresnelBlendBrdf
 	Fresnel fresnel;
 };
 
+
 struct Material
 {	
-	FresnelBlendBrdf fresnelBlend;
+	enum Type
+	{
+		Diffuse,
+		PerfectReflection,
+	};
+	void sample(const float3& wo, float2& rand, float3* wi, float3* weight) const;
+	float pdf(const float3& wi, const float3& wo) const;
+	float3 eval(const float3& wi, const float3& wo) const;
+	bool isDelta() const;
 	float3 emission;
+	LambertBrdf diffuse;
+	PerfectReflectionBrdf specular;
+	Type type;
 };

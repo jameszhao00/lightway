@@ -44,15 +44,14 @@ unique_ptr<StaticScene> load_scene(string path, float3 translation, float scale)
 			ai_scene->mMaterials[ai_mesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
 			ai_scene->mMaterials[ai_mesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_SPECULAR, spec);
 
-			material->fresnelBlend.lambertBrdf.albedo = float3(diffuse.r, diffuse.g, diffuse.b);			
-			material->fresnelBlend.fresnel.f0 = float3(spec.r, spec.g, spec.b);
-			material->fresnelBlend.phongBrdf.spec_power = 100;
-
-			if(glm::any(glm::lessThan(material->fresnelBlend.lambertBrdf.albedo, float3(0))))
+			if(diffuse.IsBlack() && !spec.IsBlack())
 			{
-				cout << "clamping albedo to 0" << endl;
-				material->fresnelBlend.lambertBrdf.albedo = 
-					glm::clamp(material->fresnelBlend.lambertBrdf.albedo, float3(0), float3(FLT_MAX));
+				material->specular.specColor = float3(spec.r, spec.g, spec.b);
+			}
+			if(spec.IsBlack() && !diffuse.IsBlack())
+			{
+				material->type = Material::Diffuse;
+				material->diffuse.albedo = float3(diffuse.r, diffuse.g, diffuse.b);
 			}
 		}
 		//material->refraction.enabled = false;

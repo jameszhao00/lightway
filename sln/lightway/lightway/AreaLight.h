@@ -9,7 +9,7 @@ struct Intersection;
 struct IntersectionQuery;
 struct RectangularAreaLight
 {
-    RectangularAreaLight(int pIdx = 0) : normal(0), idx(pIdx) 
+    RectangularAreaLight(int pIdx = 0) : normal(0), idx(pIdx), material()
 	{
 		lwassert(pIdx > -1);
 	}

@@ -62,8 +62,11 @@ bool visibleAndFacing(const Intersection& isectA, const Intersection& isectB, RT
 	return true;
 }
 
-float3 directUsingLightSamplingMis(Rand& rand, const RTScene& scene, const Intersection& pt, const float3x3& worldToZUp, 
-	const float3x3& zUpWoWorld, int* lightIdx)
+float3 directUsingLightSamplingMis(Rand& rand, const RTScene& scene, 
+	const Intersection& pt, 
+	const float3& wo,
+	const ShadingCS& shadingCS,
+	int* lightIdx)
 {
 	auto & light = scene.accl->lights[0];
 	*lightIdx = -1;
@@ -89,9 +92,9 @@ float3 directUsingLightSamplingMis(Rand& rand, const RTScene& scene, const Inter
 		//we missed the light, or we're in shadow, or we're not facing it
 		return float3(0, 0, 0);
 	}
-	float3 wiDirect = worldToZUp * wiDirectWorld;
-	float brdfPdf = pt.material->fresnelBlend.lambertBrdf.pdf(wiDirect);
-	float3 brdfEval = pt.material->fresnelBlend.lambertBrdf.eval();//.eval(wiDirect, wo);
+	float3 wiDirect = shadingCS.local(wiDirectWorld);
+	float brdfPdf = pt.material->pdf(wiDirect, wo);
+	float3 brdfEval = pt.material->eval(wiDirect, wo);;
 	float3 cosTheta = float3(dot(pt.normal, wiDirectWorld));
 	float3 le = light.material.emission;
 	*lightIdx = lightIsect.lightIdx;
@@ -110,8 +113,10 @@ float3 directUsingBrdfSamplingMis(const RectangularAreaLight& light,
 	//combine
 	return le * brdfEval * cosTheta / (lightPdf + brdfPdf);
 }
-float3 directLight(Rand& rand, const RTScene& scene, const Intersection& pt, const float3x3& worldToZUp, 
-	const float3x3& zUpWoWorld)
+float3 directLight(Rand& rand, const RTScene& scene, 
+	const Intersection& pt, 
+	const float3& wo,
+	const ShadingCS& shadingCS)
 {
 	auto & light = scene.accl->lights[0];
 	float3 lightPos;
@@ -136,8 +141,8 @@ float3 directLight(Rand& rand, const RTScene& scene, const Intersection& pt, con
 
 	if(hitLight && facing(pt, lightIsect))
 	{
-		float3 wiDirect = worldToZUp * wiDirectWorld;
-		float3 brdfEval = pt.material->fresnelBlend.lambertBrdf.eval();
+		float3 wiDirect = shadingCS.local(wiDirectWorld);
+		float3 brdfEval = pt.material->eval(wiDirect, wo);
 		float3 cosTheta = float3(dot(pt.normal, wiDirectWorld));
 		float3 le = light.material.emission;
 		return le * brdfEval * cosTheta / lightPdf;
@@ -168,24 +173,25 @@ void RenderCore::processSampleToCompletion(Rand& rand, Sample* sample)
 			sample->radiance = lightIsect.material->emission;
 		}
 		if(!sceneIsect.hit) return;
-		float3x3 zUpToWorld;
-		float3x3 worldToZUp;
-		axisConversions(sceneIsect.normal, &zUpToWorld, &worldToZUp);
-		float3 wo = worldToZUp * -ray.dir;
+		//float3x3 zUpToWorld;
+		//float3x3 worldToZUp;
+		//axisConversions(sceneIsect.normal, &zUpToWorld, &worldToZUp);
+		ShadingCS sceneIsectShadingCS(sceneIsect.normal);
+		float3 wo = sceneIsectShadingCS.local(-ray.dir);
 		//direct light
 		if((includeDirect_ || depth != 0))
 			//&& ((depth + 1) == debugExclusiveBounce_))
 		{
-			sample->radiance += throughput * directLight(rand, *scene, sceneIsect, worldToZUp, zUpToWorld);
+			sample->radiance += throughput * directLight(rand, *scene, sceneIsect, wo, sceneIsectShadingCS);
 		}
 		//generate new direction
 		if(depth != bounces_) //we're at the last bounce
 		{
 			float3 wiIndirect; 
 			float3 indirectWeight;
-			sceneIsect.material->fresnelBlend.lambertBrdf.sample(float2(rand.next01(), rand.next01()), 
+			sceneIsect.material->sample(wo, float2(rand.next01(), rand.next01()), 
 				&wiIndirect, &indirectWeight);
-			float3 wiWorld = zUpToWorld * wiIndirect;
+			float3 wiWorld = sceneIsectShadingCS.world(wiIndirect);
 			ray = Ray(sceneIsect.position, wiWorld);
 			throughput *= indirectWeight;
 		}
@@ -222,25 +228,26 @@ void RenderCore::processSampleToCompletionMis(Rand& rand, Sample* sample)
 			sample->radiance += throughput * background;
 			return;
 		}
-		float3x3 zUpToWorld;
-		float3x3 worldToZUp;
-		axisConversions(sceneIsect.normal, &zUpToWorld, &worldToZUp);
-		float3 wo = worldToZUp * -woWorldRay.dir;
+		//float3x3 zUpToWorld;
+		//float3x3 worldToZUp;
+		//axisConversions(sceneIsect.normal, &zUpToWorld, &worldToZUp);
+		ShadingCS sceneIsectShadingCS(sceneIsect.normal);
+		float3 wo = sceneIsectShadingCS.local(-woWorldRay.dir);
 		//add direct light contribution using light sampling
 		int lightIdx;
 		if((includeDirect_ || depth != 0))
 		{
 			sample->radiance += throughput *
-				directUsingLightSamplingMis(rand, *scene, sceneIsect, worldToZUp, zUpToWorld, &lightIdx);
+				directUsingLightSamplingMis(rand, *scene, sceneIsect, wo, sceneIsectShadingCS, &lightIdx);
 		}		
 		//sample the brdf
 		float3 weight;
 		float3 wiIndirect;
-		//isect.material->fresnelBlend.sample(wo, float2(rand.next01(), rand.next01()), &wiIndirect, &weight);
-		sceneIsect.material->fresnelBlend.lambertBrdf.sample(float2(rand.next01(), rand.next01()), &wiIndirect, &weight);
-		float brdfPdf = sceneIsect.material->fresnelBlend.lambertBrdf.pdf(wiIndirect);//, wo);
-		float3 brdfEval = sceneIsect.material->fresnelBlend.lambertBrdf.eval();//wiIndirect, wo);
-		float3 wiWorldIndirect = zUpToWorld * wiIndirect;
+		
+		sceneIsect.material->diffuse.sample(float2(rand.next01(), rand.next01()), &wiIndirect, &weight);
+		float brdfPdf = sceneIsect.material->pdf(wiIndirect, wo);
+		float3 brdfEval = sceneIsect.material->eval(wiIndirect, wo);
+		float3 wiWorldIndirect = sceneIsectShadingCS.world(wiIndirect);
 		//don't mul. throughput by weight just yet... we need to add light
 		//intersect with the scene
 		Ray nextWoWorldRay(sceneIsect.position, wiWorldIndirect);
@@ -290,86 +297,17 @@ const int MAX_LIGHT_PATH_DEPTH = 6;
 //lightPathThroughputs filled with MAX_LIGHT_PATH_DEPTH + 1 throughputs... each describing transfer from 0->i
 //lightPathIsect[0] = starting point at light
 //lightPathThroughputs[0] = light emission * light area
-int createLightPath(const RTScene* scene, Rand& rand, Intersection* isects, float3* T)
-{
-	//we start with light isect
-	int isectsN = 1;
-	//const float rrStartDepth = glm::min(glm::max(MAX_LIGHT_PATH_DEPTH / 2, 3), 5);
-	//for debugging purposes
-	for(int i = 0; i < MAX_LIGHT_PATH_DEPTH; i++) T[i] = float3(1000, 1000, 1000);
-	//pick point on light
-	const RectangularAreaLight* light = scene->light(0);
-	float3 pos = light->samplePoint(rand);
-	//pick direction
-	float3 lightPathWo = sampleHemisphere(rand);
-	float3 woWorldPrev;
-	{
-		float3x3 zUpToWorld;
-		float3x3 worldToZUp;
-		axisConversions(light->normal, &zUpToWorld, &worldToZUp);
-		woWorldPrev = zUpToWorld * lightPathWo;
-	}
-	//TODO: learn this thing...
-	float3 lightDirPdf = float3(1/(2 * PI * light->area()));
-	T[0] = light->material.emission * light->area();
-	float lightCosTheta = zup::cos_theta(lightPathWo);
-	isects[0].material = &light->material; 
-	isects[0].normal = light->normal;
-	isects[0].position = pos;
-	//generate light path
-	T[1] = light->material.emission * lightCosTheta / lightDirPdf;
-
-	for(int depth = 1; depth < (MAX_LIGHT_PATH_DEPTH + 1); depth++)
-	{			
-		Ray ray(pos, woWorldPrev);
-		IntersectionQuery query(ray);
-		//check for intersection
-		Intersection sceneIsect;
-		intersectScene(*scene, query, &sceneIsect, nullptr);
-		if(!sceneIsect.hit) break; //terminate if we hit nothing...
-		else isectsN++; //otherwise we like this intersection + record it!
-
-
-		isects[depth] = sceneIsect;
-		/*
-		if(depth > rrStartDepth)
-		{
-			float survivalProb = glm::min(luminance(T[depth]), 0.5f);
-			if(rand.next01() > survivalProb) break;
-			else T[depth] /= survivalProb;
-		}
-		*/
-		
-		if(depth < MAX_LIGHT_PATH_DEPTH)
-		{
-			float3x3 zUpToWorld;
-			float3x3 worldToZUp;
-			axisConversions(sceneIsect.normal, &zUpToWorld, &worldToZUp);
-			float3 wo = sampleHemisphere(rand);
-			float3 pdf = float3(1.f/(2 * PI));
-			float3 brdf = sceneIsect.material->fresnelBlend.lambertBrdf.eval();				
-			//HACK:
-			T[depth+1] = T[depth] * brdf / pdf * zup::cos_theta(wo);
-			
-			woWorldPrev = zUpToWorld * wo;
-
-		}
-	}
-	return isectsN;
-}
 int createLightPath2(const RTScene* scene, Rand& rand, Intersection isects[], float3 T[])
 {
 	const auto & light = *scene->light(0);
 	float3 lightPos = light.samplePoint(rand);
-	float3 woWorldLight;
-	{
-		float3x3 zUpToWorld, worldToZUp;
-		axisConversions(light.normal, &zUpToWorld, &worldToZUp);
-		float3 woLight = sampleHemisphere(rand);
-		woWorldLight = zUpToWorld * woLight;
-	}
+	ShadingCS lightPosShadingCS(light.normal);
+	float3 woWorldLight = lightPosShadingCS.world(sampleHemisphere(rand));
+
 	T[0] = light.material.emission * light.area();
-	isects[0].position = lightPos; isects[0].normal = light.normal;
+	isects[0].position = lightPos; 
+	isects[0].normal = light.normal;
+
 	float3 lightPdf = float3(1.f / (2 * PI * light.area()));
 	T[1] = light.material.emission * dot(woWorldLight, light.normal) / lightPdf;
 	int numIsects = 1;
@@ -385,18 +323,19 @@ int createLightPath2(const RTScene* scene, Rand& rand, Intersection isects[], fl
 		if(depth > 1)		
 		{
 			float pdf = 1 / (2*PI*dot(isects[depth-1].normal, ray.dir));
-			T[depth] = T[depth - 1] * isects[depth-1].material->fresnelBlend.lambertBrdf.eval()
-				/ pdf;
+			ShadingCS prevIsectShadingCS(isects[depth-1].normal);
+			float3 wi = prevIsectShadingCS.local(ray.dir);
+			float3 wo = prevIsectShadingCS.local(normalize(isects[depth-2].position - isects[depth-1].position));
+			float3 brdfEval = isects[depth-1].material->eval(wi, wo);
+			T[depth] = T[depth - 1] * brdfEval / pdf;
 		}
 
 		if(depth == MAX_LIGHT_PATH_DEPTH) break;
-		ray.origin = isect.position;
-		{
-			float3x3 zUpToWorld, worldToZUp;
-			axisConversions(isect.normal, &zUpToWorld, &worldToZUp);
-			float3 wo = sampleHemisphere(rand);
-			ray.dir = zUpToWorld * wo;
-		}
+
+		ray.origin = isect.position;		
+		ShadingCS isectShadingCS(isect.normal);
+		ray.dir = isectShadingCS.world(sampleHemisphere(rand));
+		
 	}
 	return numIsects;
 }
@@ -426,41 +365,40 @@ void RenderCore::bidirectionallyProcessSampleToCompletion(Rand& rand, Sample* sa
 				int pathLength = depth + 1;
 				
 				float bdptWeight = (1.f / (pathLength));
-				//hack:!
-				//sample->radiance += bdptWeight * throughput * lightisect.material->emission;
+				sample->radiance += bdptWeight * throughput * lightisect.material->emission;
 			}
 		}
-		//debugWeights[depth + 1] += (1/(depth + 1));
 		if(!sceneIsect.hit) return; //we didn't hit scene
 		if(depth == bounces_) 
 		{
 			//we only came here for the direct connection...
 			break;
 		}
-		float3x3 worldToZUp;
-		float3x3 zUpToWorld;
-		axisConversions(sceneIsect.normal, &zUpToWorld, &worldToZUp);
-		float3 woEyePath = worldToZUp * -sceneRay.dir;
+		
+		ShadingCS evShadingCS(sceneIsect.normal);
+		float3 woEV = evShadingCS.local(-sceneRay.dir);
 		for(int lightPathIsectIdx = 0; lightPathIsectIdx < lightPathIsectsN; lightPathIsectIdx++)			
 		{
 			//there's a shadow ray here! (so +1)
 			int pathLength = (lightPathIsectIdx) + (depth + 1) + 1;
 			//todo: make the following depend on Russian Roulette data
 			//we lose a variability b/c our first eye path is not removable
-			//HACK: for testing
-			float bidirectionalWeight = 1.f ;/// (pathLength);
+
+			float bidirectionalWeight = 1.f / (pathLength);
 			
 			
-			//HACK: DEBUGGING HACK
-			//if(pathLength > (bounces_ + 1)) continue;
+			if(pathLength > (bounces_ + 1)) continue;
 
 			if(visibleAndFacing(lightPathIsect[lightPathIsectIdx], sceneIsect, *scene)
 				&& (includeDirect_ || (depth != 0 || lightPathIsectIdx != 0)))
 			{
 				const auto & lv = lightPathIsect[lightPathIsectIdx];
 				const auto & ev = sceneIsect;
+				//light vert to eye vert dir
+				float3 ev2lv = normalize(lv.position - ev.position);
 				//eye vert brdf
-				float3 evBrdfEval = ev.material->fresnelBlend.lambertBrdf.eval();
+				float3 wiEV = evShadingCS.local(ev2lv);
+				float3 evBrdfEval = ev.material->eval(wiEV, woEV);
 				//light vert brdf
 				float3 lvBrdfEval;
 				if(lightPathIsectIdx == 0)
@@ -468,12 +406,14 @@ void RenderCore::bidirectionallyProcessSampleToCompletion(Rand& rand, Sample* sa
 					lvBrdfEval = float3(1);
 				}
 				else
-				{					
-					lvBrdfEval = lv.material->fresnelBlend.lambertBrdf.eval();
+				{				
+					ShadingCS lvShadingCS(lv.normal);
+					float3 wiLV = lvShadingCS.local(-ev2lv);
+					float3 woLV = lvShadingCS.local(normalize(lightPathIsect[lightPathIsectIdx - 1].position 
+						- lightPathIsect[lightPathIsectIdx].position));
+					lvBrdfEval = lv.material->eval(wiLV, woLV);
 				}
-				
-				//light vert to eye vert dir
-				float3 ev2lv = normalize(lv.position - ev.position);				
+						
 				//geometry term
 				float g = dot(ev2lv, ev.normal) * dot(-ev2lv, lv.normal) / glm::distance2(lv.position, ev.position);
 				float3 lpT = lvBrdfEval * lightPathThroughputs[lightPathIsectIdx];
@@ -487,9 +427,8 @@ void RenderCore::bidirectionallyProcessSampleToCompletion(Rand& rand, Sample* sa
 		//use brdf and sample a new direction direction 
 		float3 wiIndirect;
 		float3 brdfWeight;
-		//sceneIsect.material->fresnelBlend.sample(wo, float2(rand.next01(), rand.next01()), &wiIndirect, &brdfWeight);
-		sceneIsect.material->fresnelBlend.lambertBrdf.sample(float2(rand.next01(), rand.next01()), &wiIndirect, &brdfWeight);
-		float3 wiIndirectWorld = zUpToWorld * wiIndirect;
+		sceneIsect.material->sample(woEV, float2(rand.next01(), rand.next01()), &wiIndirect, &brdfWeight);
+		float3 wiIndirectWorld = evShadingCS.world(wiIndirect);
 		sceneRay = Ray(sceneIsect.position, wiIndirectWorld);
 		//update throughput	
 		throughput *= brdfWeight;
@@ -503,7 +442,6 @@ void RenderCore::bidirectionallyProcessSampleToCompletion(Rand& rand, Sample* sa
 		}
 		*/
 	}
-	//for(int i = 0; i < 32; i++) cout << "weight [" << i << "] = " << debugWeights[i] << endl;
 }
 int RenderCore::step(Rand& rand, int groupIdx)
 {
@@ -554,7 +492,7 @@ int RenderCore::step(Rand& rand, int groupIdx)
 			int desiredBounces =6;
 			includeDirect_ = true;
 			debugExclusiveBounce_ = 0;
-			if(1)
+			if(0)
 			{
 				bounces_ = desiredBounces;
 				processSampleToCompletionMis(rand, &sample);

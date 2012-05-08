@@ -85,7 +85,6 @@ inline float luminance(float3 rgb)
 {
 	 return glm::dot(float3(0.2126, 0.7152, 0.0722), rgb);
 }
-
 inline void axisConversions(const float3& normal, float3x3* zUpToWorld, float3x3* worldToZUp)
 {
 	//hopefully we can collapse this..
@@ -108,6 +107,18 @@ inline void axisConversions(const float3& normal, float3x3* zUpToWorld, float3x3
 	}
 	*worldToZUp = glm::transpose(*zUpToWorld);	
 }
+struct ShadingCS
+{
+	ShadingCS(const float3& normal)
+	{
+		axisConversions(normal, &zUpToWorld, &worldToZUp);
+	}
+	float3 local(const float3& globalDir) const { return worldToZUp * globalDir; }
+	float3 world(const float3& localDir) const { return zUpToWorld * localDir; }
+private:
+	float3x3 zUpToWorld;
+	float3x3 worldToZUp;
+};
 inline float3 sampleCosineWeightedHemisphere(Rand& rand, float* pdf)
 {
 	float rx = rand.next01(); float ry = rand.next01();

@@ -1,3 +1,9 @@
+5/7
+- change to hemispheric direction for the light (instead of cosine weighted) and see what happens
+- use visibility testing functions and see what happens
+- 1st bounce, looks exactly the same
+- the error's probably in the next weight calculation in createLightPath (1st bounce works, subseq. bounces dont...)
+
 stuff worked on:
 - fixing direct lighting
 - broke createLightPath (set T[0] to emission)
