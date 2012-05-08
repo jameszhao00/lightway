@@ -35,7 +35,7 @@ float length(const T& v) { return glm::length(v); }
 struct Ray;
 struct Rand
 {
-    Rand() : norm_unif_rand(0, 1) {  }
+    Rand(unsigned int seed = 0) : norm_unif_rand(0, 1), gen( std::mt19937::default_seed + seed ) { }
     std::uniform_real_distribution<float> norm_unif_rand;
     std::mt19937 gen;
     float next01()

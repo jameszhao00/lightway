@@ -34,7 +34,7 @@ public:
 		QTimer* timer = new QTimer();
 		timer->setSingleShot(false);
 		connect(timer, SIGNAL(timeout()), this, SLOT(update()));
-		timer->start(1500);
+		timer->start(3550);
 	}
     void glInit()
     {        
@@ -77,8 +77,8 @@ public:
 			{		
 				int fb_i = y * w + x;
 				//HACK:
-				float3 tonemapped = float3(rgbFb[fb_i]) / (float3(1) + float3(rgbFb[fb_i]));
-				//float3 tonemapped = float3(rgbFb[fb_i]);
+				//float3 tonemapped = float3(rgbFb[fb_i]) / (float3(1) + float3(rgbFb[fb_i]));
+				float3 tonemapped = float3(rgbFb[fb_i]);
 				float3 srgb = glm::pow(tonemapped, float3(1/2.2f));
 				
 				fbData_[fb_i].r = (int)floor(srgb.x * 255);

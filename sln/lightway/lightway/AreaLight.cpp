@@ -68,8 +68,8 @@ bool RectangularAreaLight::intersect(const IntersectionQuery& query, Intersectio
 RectangularAreaLight createDefaultLight()
 {	
 	RectangularAreaLight light;
-	float3 base(.5, .5, 0);
-	float y = .25;
+	float3 base(.25, 0, 0);
+	float y = .35;
 	/*
 	float3 light_verts[] = {
 		float3(-.125, y, -.125),
@@ -80,10 +80,10 @@ RectangularAreaLight createDefaultLight()
 		*/
 
 	float3 light_verts[] = {
-		float3(-.125, y, -.125),
-		float3(-.125, y, .125),
-		float3(.125, y, .125),
-		float3(.125, y, -.125)
+		base + float3(-.125, y, -.125),
+		base + float3(-.125, y, .125),
+		base + float3(.125, y, .125),
+		base + float3(.125, y, -.125)
 	};
 	
     light.corners[0] = light_verts[0];//float3(-1, 39.5, -1);
