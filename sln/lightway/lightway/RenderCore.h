@@ -92,7 +92,8 @@ void intersectScene(const RTScene& scene,
 bool facing(const Intersection& isectA, const Intersection& isectB);
 bool facing( const float3& ptA, const float3& na, const float3& ptB, const float3& nb );
 //visibility = facing each other, and not occluded
-bool visibleAndFacing(const Intersection& isectA, const Intersection& isectB, RTScene& scene);
+bool visibleAndFacing(const Intersection& isectA, const Intersection& isectB, const RTScene& scene);
 
 void ptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample);
 void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample);
+void bdptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample);

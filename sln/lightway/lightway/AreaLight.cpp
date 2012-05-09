@@ -79,10 +79,10 @@ RectangularAreaLight createDefaultLight()
 	*/
 	
 	float3 light_verts[] = {
-		base + float3(-.0125, y, -.0125),
-		base + float3(-.0125, y, .0125),
-		base + float3(.0125, y, .0125),
-		base + float3(.0125, y, -.0125)
+		base + float3(-.125, y, -.125),
+		base + float3(-.125, y, .125),
+		base + float3(.125, y, .125),
+		base + float3(.125, y, -.125)
 	};
 	
 	

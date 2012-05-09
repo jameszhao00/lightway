@@ -153,6 +153,9 @@
     <ClCompile Include="ptMIS.cpp">
       <Filter>Source Files\integrators</Filter>
     </ClCompile>
+    <ClCompile Include="bdpt.cpp">
+      <Filter>Source Files\integrators</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
