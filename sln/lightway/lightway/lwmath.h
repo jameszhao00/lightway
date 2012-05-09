@@ -42,6 +42,10 @@ struct Rand
     {
 		return norm_unif_rand(gen);
     }
+	float2 next01f2()
+	{
+		return float2(next01(), next01());
+	}
 };
 struct TestDeterministicRand
 {
@@ -87,13 +91,13 @@ inline float luminance(float3 rgb)
 }
 inline void axisConversions(const float3& normal, float3x3* zUpToWorld, float3x3* worldToZUp)
 {
+	const float epsilon = 0.000001;
 	//hopefully we can collapse this..
-	if(normal.x == 0 && normal.y == 0 && normal.z == 1)
+	if(fabs(normal.x) < epsilon && fabs(normal.y) < epsilon && fabs(normal.z - 1) < epsilon)
 	{
 		*zUpToWorld = float3x3();
-		//do nothing
 	}
-	else if(normal.x == 0 && normal.y == 0 && normal.z == -1)	
+	else if(fabs(normal.x) < epsilon && fabs(normal.y) < epsilon && fabs(normal.z + 1) < epsilon)
 	{
 		float3 rotaxis(0, 1, 0);
 		float rotangle = PI;

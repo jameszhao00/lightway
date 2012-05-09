@@ -31,9 +31,8 @@ unique_ptr<StaticScene> load_scene(string path, float3 translation, float scale)
 
 	float4x4 t = glm::translate(translation) * glm::scale(float3(scale));
 
-	auto error = importer.GetErrorString();
 	lwassert(ai_scene);
-	for(int i = 0; i < ai_scene->mNumMeshes; i++)
+	for(unsigned int i = 0; i < ai_scene->mNumMeshes; i++)
 	{
 		auto ai_mesh = ai_scene->mMeshes[i];
 		int faces_n = ai_mesh->mNumFaces;
@@ -44,8 +43,10 @@ unique_ptr<StaticScene> load_scene(string path, float3 translation, float scale)
 			ai_scene->mMaterials[ai_mesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
 			ai_scene->mMaterials[ai_mesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_SPECULAR, spec);
 
+
 			if(diffuse.IsBlack() && !spec.IsBlack())
 			{
+				material->type = Material::PerfectReflection;
 				material->specular.specColor = float3(spec.r, spec.g, spec.b);
 			}
 			if(spec.IsBlack() && !diffuse.IsBlack())

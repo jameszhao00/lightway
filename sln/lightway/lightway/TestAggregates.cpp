@@ -16,7 +16,6 @@ void testUniformGridAggregate()
 {
 	const int ITERATIONS = 1000;
 	const int TESTS_PER_ITERATION = 1000;
-	const unsigned int SEED = 323;
 	const int MIN_TRIS = 30;
 	const int MAX_TRIS = 200;
 	const float3 SUBDIVISIONS_MIN(29);

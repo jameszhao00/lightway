@@ -17,7 +17,7 @@ signals:
 	void sampleRecorded(const vector<vector<vector<SampleHistoryRecord>>>*, int);
 	void finishedRecording();
 public:
-	SampleHistoryRecorder(int maxDepth) : maxDepth_(maxDepth), sampleIdx_(0), recording_(false) { }
+	SampleHistoryRecorder(int maxDepth) : sampleIdx_(0), maxDepth_(maxDepth), recording_(false) { }
 	void newSample(int2 xy);
 	void record(int2 xy, int depth, string name, float3 value);
 	void beginRecording(int2 pos, int count) 

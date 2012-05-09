@@ -36,24 +36,19 @@ struct Fresnel
 struct PerfectReflectionBrdf
 {
 	//generate random directions + weight (brdf * cos) / p
-	void sample(const float3& wo, const float2& rand, float3* wi, float3* weight) const
+	void sample(const float3& wo, float3* wi, float3* weight) const
 	{
 		*wi = glm::reflect(-wo, float3(0, 0, 1));
-		lwassert_greater(wi->z, 0);
-		// TODO: not implemented
-		lwassert(0); 
+		*weight = specColor;
 	}
-
 	//get the prob. for a particular direction
-	float pdf(const float3& wi, const float3& wo) const
+	float pdf() const
 	{
 		return 0.f;
 	}
-
-	//evaluate the pdf
-	float3 eval(const float3& wi, const float3& wo) const
+	float3 eval() const
 	{
-		return float3(0);
+		return float3(specColor);
 	}
 	bool isDelta() const
 	{
@@ -233,7 +228,6 @@ struct FresnelBlendBrdf
 	}
 	float pdf(const float3& wi, const float3& wo) const
 	{
-		float result = 0.5f * (phongBrdf.pdf(wi, wo) + lambertBrdf.pdf(wi));
 		if(phongBrdf.pdf(wi, wo)  <= 0)
 		{
 			cout << "";
@@ -266,7 +260,7 @@ struct Material
 		Diffuse,
 		PerfectReflection,
 	};
-	void sample(const float3& wo, float2& rand, float3* wi, float3* weight) const;
+	void sample(const float3& wo, const float2& rand, float3* wi, float3* weight) const;
 	float pdf(const float3& wi, const float3& wo) const;
 	float3 eval(const float3& wi, const float3& wo) const;
 	bool isDelta() const;

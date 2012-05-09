@@ -33,7 +33,7 @@ struct AABB
 {
 	AABB() { }
 	AABB(const float3& p_min_pt, const float3& p_max_pt) 
-		: max_pt(p_max_pt), min_pt(p_min_pt), extent(p_max_pt-p_min_pt) { }
+		: extent(p_max_pt-p_min_pt), max_pt(p_max_pt), min_pt(p_min_pt)  { }
 
 	//which side is the touching point on?
 	int3 side(const float3& touching_pt, float epsilon = 0.00001) const
@@ -69,11 +69,11 @@ struct Ray
 
 struct IntersectionQuery
 {
-	IntersectionQuery(const Ray& pRay, float pMaxT = INF, float pMinT = 0.00001f, float pMinCosTheta = 0.00001f) :	
-		ray(pRay), maxT(pMaxT), minT(pMinT), minCosTheta(pMinCosTheta)
+	IntersectionQuery(const Ray& pRay, float pMaxT = INF, float pMinT = 0.00001f, float pMinCosTheta = 0.00001f, bool computeShadingNormals = false) :	
+		ray(pRay), maxT(pMaxT), minT(pMinT), minCosTheta(pMinCosTheta), computeShadingNormals(computeShadingNormals)
 	{
 	}
-		
+	bool computeShadingNormals;
 	Ray ray;
 	float maxT;
 	float minT;

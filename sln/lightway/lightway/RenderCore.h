@@ -15,7 +15,7 @@ const int num_lights = 1;
 const int num_area_lights = 1;
 struct RTScene
 {
-	RTScene() : scene(nullptr) { }
+	RTScene() : scene(nullptr), background(0) { }
 	void make_accl()
 	{		
 		accl = move(makeAccelScene(scene.get()));// make_uniform_grid(*(this->scene), int3(30));
@@ -26,6 +26,7 @@ struct RTScene
 	}
 	unique_ptr<AccelScene> accl;
 	unique_ptr<StaticScene> scene;
+	float3 background;
 };
 const int FB_CAPACITY = 1024;
 
@@ -63,10 +64,8 @@ private:
     RenderCore(const RenderCore& other);
     RenderCore& operator=(const RenderCore& other);
 	void workThread(int groupIdx);	
-	void processSampleToCompletionMis(Rand& rand, Sample* sample);
 	void bidirectionallyProcessSampleToCompletion(Rand& rand, Sample* sample);
     int step(Rand& rand, int groupIdx);
-	void processSampleToCompletion(Rand& rand, Sample* sample);
 private:
     int2 size_;
 	bool clearSignal_[MAX_RENDER_THREADS];
@@ -78,3 +77,22 @@ private:
 	bool includeDirect_;
 	int debugExclusiveBounce_;
 };
+
+bool hitLightFirst(const Intersection& sceneIsect, const Intersection& lightIsect);
+bool hitSceneFirst(const Intersection& sceneIsect, const Intersection& lightIsect);
+bool hitNothing(const Intersection& sceneIsect, const Intersection& lightIsect);
+void intersectScene(const RTScene& scene, 
+	const IntersectionQuery& query, 
+	Intersection* sceneIsect,
+	Intersection* lightIsect);
+void intersectScene(const RTScene& scene, 
+	const Ray& ray, 
+	Intersection* sceneIsect,
+	Intersection* lightIsect);
+bool facing(const Intersection& isectA, const Intersection& isectB);
+bool facing( const float3& ptA, const float3& na, const float3& ptB, const float3& nb );
+//visibility = facing each other, and not occluded
+bool visibleAndFacing(const Intersection& isectA, const Intersection& isectB, RTScene& scene);
+
+void ptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample);
+void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample);

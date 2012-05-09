@@ -20,7 +20,6 @@ UniformGrid::~UniformGrid()
 {
 	delete data;
 }
-const float DDA_T_EPSILON = 0.0001;
 bool UniformGrid::dda_vals(const Ray& ray, float3* t_delta, float3* step, float3* t_max, int3* start_cell, int3* outcell) const
 {
 	float t, t_end;
@@ -115,7 +114,6 @@ bool UniformGrid::dda_next(const float3& t_delta, const float3& step, const int3
 	*t_max = target_t_max;
 	return true;
 }
-const float MIN_INTERSECTION_T = 0.000001f;
 bool UniformGrid::intersect(const IntersectionQuery& query, Intersection* intersection) const
 {
 	float3 t_delta, step, t_max;

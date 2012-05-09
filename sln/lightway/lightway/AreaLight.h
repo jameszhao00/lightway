@@ -2,14 +2,14 @@
 #include "lwmath.h"
 #include "bxdf.h"
 
-const int INVALID_LIGHT_IDX = -1;
+const int INVALID_LIGHT_ID = -1;
 inline bool validLightIdx(int idx) { return idx > -1; }
 struct Material;
 struct Intersection;
 struct IntersectionQuery;
 struct RectangularAreaLight
 {
-    RectangularAreaLight(int pIdx = 0) : normal(0), idx(pIdx), material()
+    RectangularAreaLight(int pIdx = 0) : normal(0), id(pIdx)
 	{
 		lwassert(pIdx > -1);
 	}
@@ -23,7 +23,7 @@ struct RectangularAreaLight
     float3 corners[4];
     float3 normal;
 	Material material;
-	int idx;
+	int id;
 private:	
 };
 

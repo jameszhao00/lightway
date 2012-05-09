@@ -46,6 +46,9 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="Source Files\integrators">
+      <UniqueIdentifier>{0e5f4ae7-17ac-4d6e-b72e-1fd8b7993c1f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -143,6 +146,12 @@
     </ClCompile>
     <ClCompile Include="bxdf.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pt.cpp">
+      <Filter>Source Files\integrators</Filter>
+    </ClCompile>
+    <ClCompile Include="ptMIS.cpp">
+      <Filter>Source Files\integrators</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

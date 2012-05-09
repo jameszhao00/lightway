@@ -74,7 +74,6 @@ void Ray::intersect_with_spheres(const Sphere* spheres, const int num_spheres, I
 		}
 	}
 }
-const float MIN_T = 0.001;
 void Ray::intersect_with_triangles(const Triangle* triangles, const int num_tris, Intersection* intersections) const
 {
 	assert(false);

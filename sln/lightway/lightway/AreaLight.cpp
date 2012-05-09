@@ -50,7 +50,6 @@ bool RectangularAreaLight::intersect(const IntersectionQuery& query, Intersectio
 	if(d < query.minT || d > query.maxT) return false;
 
 	float3 pt = query.ray.at(d);
-	float dp = dot(normalize(pt - corners[3]), normalize(corners[0] - corners[3]));
 	if((dot(normalize(pt - corners[0]), normalize(corners[1] - corners[0]))) < -IN_RECT_ANGLE_EPSILON) return false;
 	if((dot(normalize(pt - corners[1]), normalize(corners[2] - corners[1]))) < -IN_RECT_ANGLE_EPSILON) return false;
 	if((dot(normalize(pt - corners[2]), normalize(corners[3] - corners[2]))) < -IN_RECT_ANGLE_EPSILON) return false;
@@ -61,37 +60,39 @@ bool RectangularAreaLight::intersect(const IntersectionQuery& query, Intersectio
 	intersection->normal = (normal);
 	intersection->position = pt;
 	intersection->t = d;
-	intersection->lightIdx = idx;
+	intersection->lightId = id;
 	return true;
 } 
 
 RectangularAreaLight createDefaultLight()
 {	
 	RectangularAreaLight light;
-	float3 base(.25, 0, 0);
+	float3 base(0, 0, 0);
 	float y = .35;
 	/*
 	float3 light_verts[] = {
-		float3(-.125, y, -.125),
-		float3(-.125, y, .125),
-		float3(.125, y, .125),
-		float3(.125, y, -.125)
+		base + float3(-.2, y, -.2),
+		base + float3(-.2, y, .2),
+		base + float3(.2, y, .2),
+		base + float3(.2, y, -.2)
 	};
-		*/
-
+	*/
+	
 	float3 light_verts[] = {
-		base + float3(-.125, y, -.125),
-		base + float3(-.125, y, .125),
-		base + float3(.125, y, .125),
-		base + float3(.125, y, -.125)
+		base + float3(-.0125, y, -.0125),
+		base + float3(-.0125, y, .0125),
+		base + float3(.0125, y, .0125),
+		base + float3(.0125, y, -.0125)
 	};
+	
 	
     light.corners[0] = light_verts[0];//float3(-1, 39.5, -1);
     light.corners[1] = light_verts[1];//float3(1, 39.5, -1);
     light.corners[2] = light_verts[2];//float3(1, 39.5, 1);
     light.corners[3] = light_verts[3];//float3(-1, 39.5, 1);
-    light.normal = float3(0, 1, 0);
+    light.normal = float3(0, -1, 0);
 	
 	light.material.emission = float3(6);
+	//light.material.emission = float3(2);
 	return light;
 }

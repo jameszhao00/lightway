@@ -28,13 +28,13 @@ class Viewport : public QGLWidget
 {
 	Q_OBJECT
 public:
-	Viewport(QWidget* parent = nullptr) : QGLWidget(parent), texture_(INVALID_TEXTURE), renderCore(nullptr) 
+	Viewport(QWidget* parent = nullptr) : QGLWidget(parent), renderCore(nullptr) , texture_(INVALID_TEXTURE)
 	{ 		
 		setFocusPolicy(Qt::ClickFocus);
 		QTimer* timer = new QTimer();
 		timer->setSingleShot(false);
 		connect(timer, SIGNAL(timeout()), this, SLOT(update()));
-		timer->start(3550);
+		timer->start(3000);
 	}
     void glInit()
     {        

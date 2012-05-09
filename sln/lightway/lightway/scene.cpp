@@ -23,7 +23,14 @@ void AccelScene::intersect(const IntersectionQuery& query,
 			sceneIsect->t = sceneHit.t;
 			sceneIsect->hit = true;
 			sceneIsect->material = tri.material;
+
+			if(query.computeShadingNormals)
+			{
+				sceneIsect->shadingNormal = tri.shadingNormals(float2(sceneHit.u, sceneHit.v));
+			}
 			sceneIsect->normal = tri.normal;
+			
+
 			sceneIsect->position = query.ray.at(sceneHit.t);
 			sceneIsect->primitiveId = sceneHit.id0;
 		}

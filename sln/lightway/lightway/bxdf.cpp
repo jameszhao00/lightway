@@ -2,7 +2,7 @@
 #include "bxdf.h"
 
 
-void Material::sample(const float3& wo, float2& rand, float3* wi, float3* weight) const
+void Material::sample(const float3& wo, const float2& rand, float3* wi, float3* weight) const
 {
 	if(type == Diffuse)
 	{
@@ -10,7 +10,7 @@ void Material::sample(const float3& wo, float2& rand, float3* wi, float3* weight
 	}
 	else if(type == PerfectReflection)
 	{
-		return specular.sample(wo, rand, wi, weight);
+		return specular.sample(wo, wi, weight);
 	}
 }
 float Material::pdf(const float3& wi, const float3& wo) const
@@ -21,8 +21,10 @@ float Material::pdf(const float3& wi, const float3& wo) const
 	}
 	else if(type == PerfectReflection)
 	{
-		return specular.pdf(wi, wo);
+		return specular.pdf();
 	}
+	lwassert(false);
+	return -1;
 }
 float3 Material::eval(const float3& wi, const float3& wo) const
 {
@@ -32,8 +34,10 @@ float3 Material::eval(const float3& wi, const float3& wo) const
 	}
 	else if(type == PerfectReflection)
 	{
-		return specular.eval(wi, wo);
+		return specular.eval();
 	}
+	lwassert(false);
+	return float3(-1);
 }
 bool Material::isDelta() const
 {
@@ -45,4 +49,6 @@ bool Material::isDelta() const
 	{
 		return specular.isDelta();
 	}
+	lwassert(false);
+	return false;
 }

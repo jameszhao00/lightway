@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'lightway.ui'
 **
-** Created: Sun May 6 16:57:18 2012
+** Created: Tue May 8 15:49:31 2012
 **      by: Qt User Interface Compiler version 4.8.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!

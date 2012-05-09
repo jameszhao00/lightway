@@ -36,6 +36,12 @@ struct Triangle
 		vertices[1].position = v1;
 		vertices[2].position = v2;
 	}
+	float3 shadingNormals(const float2& uv) const
+	{
+		return normalize(vertices[0].normal * (1-uv.x-uv.y) + 
+			vertices[1].normal * uv.x +
+			vertices[2].normal * uv.y);
+	}
 	void compute_normal() 
 	{ 		
 		normal = glm::normalize(vertices[0].normal + vertices[1].normal + vertices[2].normal);
