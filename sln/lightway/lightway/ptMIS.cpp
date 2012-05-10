@@ -105,6 +105,10 @@ void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 		float3 wiIndirect;
 
 		isect.material->sample(wo, float2(rand.next01(), rand.next01()), &wiIndirect, &weight);
+		if(isBlack(weight))
+		{
+			return;
+		}
 		float brdfPdf = isect.material->pdf(wiIndirect, wo);
 		float3 brdfEval = isect.material->eval(wiIndirect, wo);
 		float3 wiWorldIndirect = sceneIsectShadingCS.world(wiIndirect);

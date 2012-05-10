@@ -8,9 +8,13 @@ void Material::sample(const float3& wo, const float2& rand, float3* wi, float3* 
 	{
 		return diffuse.sample(rand, wi, weight);
 	}
-	else if(type == PerfectReflection)
+	else if(type == SpecularReflection)
 	{
-		return specular.sample(wo, wi, weight);
+		return specularReflection.sample(wo, wi, weight);
+	}
+	else if(type == SpecularTransmission)
+	{
+		return specularTransmission.sample(wo, wi, weight);
 	}
 }
 float Material::pdf(const float3& wi, const float3& wo) const
@@ -19,9 +23,13 @@ float Material::pdf(const float3& wi, const float3& wo) const
 	{
 		return diffuse.pdf(wi);
 	}
-	else if(type == PerfectReflection)
+	else if(type == SpecularReflection)
 	{
-		return specular.pdf();
+		return specularReflection.pdf();
+	}
+	else if(type == SpecularTransmission)
+	{
+		return specularTransmission.pdf();
 	}
 	lwassert(false);
 	return -1;
@@ -32,9 +40,13 @@ float3 Material::eval(const float3& wi, const float3& wo) const
 	{
 		return diffuse.eval();
 	}
-	else if(type == PerfectReflection)
+	else if(type == SpecularReflection)
 	{
-		return specular.eval();
+		return specularReflection.eval();
+	}
+	else if(type == SpecularTransmission)
+	{
+		return specularTransmission.eval();
 	}
 	lwassert(false);
 	return float3(-1);
@@ -45,9 +57,13 @@ bool Material::isDelta() const
 	{
 		return diffuse.isDelta();
 	}
-	else if(type == PerfectReflection)
+	else if(type == SpecularReflection)
 	{
-		return specular.isDelta();
+		return specularReflection.isDelta();
+	}
+	else if(type == SpecularTransmission)
+	{
+		return specularTransmission.isDelta();
 	}
 	lwassert(false);
 	return false;

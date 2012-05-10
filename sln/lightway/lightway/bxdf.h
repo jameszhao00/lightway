@@ -33,7 +33,7 @@ struct Fresnel
 		return float3(0);
 	}
 };
-struct PerfectReflectionBrdf
+struct SpecularReflectionBrdf
 {
 	//generate random directions + weight (brdf * cos) / p
 	void sample(const float3& wo, float3* wi, float3* weight) const
@@ -57,6 +57,7 @@ struct PerfectReflectionBrdf
 	float3 specColor;
 	//everything is z-up
 };
+
 struct BlinnPhongBrdf
 {
 	BlinnPhongBrdf() : spec_power(10) { }
@@ -125,6 +126,46 @@ struct BlinnPhongBrdf
 	}
 	float spec_power;
 };
+struct SpecularTransmissionBtdf
+{
+	//generate random directions + weight (brdf * cos) / p
+	void sample(const float3& wo, float3* wi, float3* weight) const
+	{
+		bool entering = wo.z > 0;
+		float etaIncoming = iorOutside; 
+		float etaOutgoing = iorInside;
+		if(!entering) swap(etaIncoming, etaOutgoing);
+		float sini2 = zup::sin_theta2(wo);
+		float eta = etaIncoming / etaOutgoing;
+		float sino2 = sini2 * eta * eta;
+		if(sino2 >= 1) 
+		{
+			// toatal internal reflection
+			*weight = float3(0);
+			return;
+		}
+		float coso = sqrt(glm::max(1 - sino2, 0.f));
+		if(entering) coso *= -1;
+		*wi = float3(eta * -wo.x, eta * -wo.y, coso);
+		*weight = color;
+	}
+	//get the prob. for a particular direction
+	float pdf() const
+	{
+		return 0.f;
+	}
+	float3 eval() const
+	{
+		return float3(color);
+	}
+	bool isDelta() const
+	{
+		return true;
+	}
+	float3 color;
+	float iorInside;
+	float iorOutside;
+};
 /*
 struct Btdf
 {
@@ -168,9 +209,9 @@ struct Dielectric
 		return &refraction.fresnel;
 	}*/
 };
-struct LambertBrdf
+struct DiffuseBrdf
 {	
-	LambertBrdf() : albedo(0) { }
+	DiffuseBrdf() : albedo(0) { }
 	void sample(const float2& rand, float3* wi, float3* weight) const
 	{
 		float a = sqrt(1 - rand.y);
@@ -248,7 +289,7 @@ struct FresnelBlendBrdf
 			+ (float3(1)-fresnel.f0) * diffuseEval;
 	}	
 	BlinnPhongBrdf phongBrdf;
-	LambertBrdf lambertBrdf;
+	DiffuseBrdf lambertBrdf;
 	Fresnel fresnel;
 };
 
@@ -258,14 +299,16 @@ struct Material
 	enum Type
 	{
 		Diffuse,
-		PerfectReflection,
+		SpecularReflection,
+		SpecularTransmission
 	};
 	void sample(const float3& wo, const float2& rand, float3* wi, float3* weight) const;
 	float pdf(const float3& wi, const float3& wo) const;
 	float3 eval(const float3& wi, const float3& wo) const;
 	bool isDelta() const;
 	float3 emission;
-	LambertBrdf diffuse;
-	PerfectReflectionBrdf specular;
+	DiffuseBrdf diffuse;
+	SpecularReflectionBrdf specularReflection;
+	SpecularTransmissionBtdf specularTransmission;
 	Type type;
 };

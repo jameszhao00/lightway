@@ -1,8 +1,16 @@
+5/9
+- the bdpt is slightly off (darker) compared to the ref in the diffuse scene
+	- problem caused by quitting if we hit a light in bdpt, but not in ptmis/pt
+	- change it so that lights block eye rays
+	- added a cos term to spec brdf's sample function
+
 5/7
 - change to hemispheric direction for the light (instead of cosine weighted) and see what happens
 - use visibility testing functions and see what happens
 - 1st bounce, looks exactly the same
 - the error's probably in the next weight calculation in createLightPath (1st bounce works, subseq. bounces dont...)
+
+- cos_theta should be w.r.t the light wi? (i.e. not this wi here...)
 
 stuff worked on:
 - fixing direct lighting

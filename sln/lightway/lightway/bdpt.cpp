@@ -76,6 +76,10 @@ int createPath(const RTScene& scene,
 		float3 wi;
 		float3 weight;
 		isect.material->sample(isectShadingCS.local(woWorld), rand.next01f2(), &wi, &weight);
+		if(isBlack(weight))
+		{
+			break;
+		}
 		float3 wiWorld = isectShadingCS.world(wi);		
 		ray.origin = isect.position;		
 		ray.dir = wiWorld;
@@ -107,68 +111,6 @@ int createLightPath2(const RTScene& scene,
 	float3 alpha = light.material.emission * dot(woWorldLight, light.normal) / lightPdf;
 	//HACK: changed to intersect lights
 	return 1 + createPath(scene, rand, maxVerts - 1, alpha, lightRay, true, &vertices[1]);
-}
-int createLightPath(const RTScene& scene, Rand& rand, Intersection isects[], float3 T[])
-{
-	const auto & light = *scene.light(0);
-	float3 lightPos = light.samplePoint(rand);
-	ShadingCS lightPosShadingCS(light.normal);
-	float3 woWorldLight = lightPosShadingCS.world(sampleHemisphere(rand));
-
-	T[0] = light.material.emission * light.area();
-	isects[0].position = lightPos; 
-	isects[0].normal = light.normal;
-
-	float3 lightPdf = float3(1.f / (2 * PI * light.area()));
-	T[1] = light.material.emission * dot(woWorldLight, light.normal) / lightPdf;
-	int numIsects = 1;
-	Ray ray(lightPos, woWorldLight);
-	for(int depth = 1; depth < (LIGHT_PATH_VERTS + 1); depth++)
-	{		
-		IntersectionQuery query(ray);
-		Intersection isect;
-		intersectScene(scene, query, &isect, nullptr);
-		if(!isect.hit) break;
-		else numIsects++;
-		isects[depth] = isect;
-		/*
-		if(depth > 1)		
-		{
-			float pdf = 1 / (2*PI*dot(isects[depth-1].normal, ray.dir));
-			ShadingCS prevIsectShadingCS(isects[depth-1].normal);
-			float3 wi = prevIsectShadingCS.local(ray.dir);
-			float3 wo = prevIsectShadingCS.local(normalize(isects[depth-2].position - isects[depth-1].position));
-			float3 brdfEval = isects[depth-1].material->eval(wi, wo);
-			T[depth] = T[depth - 1] * brdfEval / pdf;
-		}
-		*/
-		if(depth == LIGHT_PATH_VERTS) break;
-
-		ShadingCS isectShadingCS(isect.normal);
-		float3 woWorld = normalize(isect.position - isects[depth - 1].position);
-		float3 wi;
-		float3 weight;
-		isect.material->sample(isectShadingCS.local(woWorld), rand.next01f2(), &wi, &weight);
-		float3 wiWorld = isectShadingCS.world(wi);			
-		T[depth + 1] = T[depth] * weight;
-
-		ray.origin = isect.position;		
-		ray.dir = wiWorld;
-		
-
-		/*
-		ray.origin = isect.position;		
-		ShadingCS isectShadingCS(isect.normal);
-		ray.dir = isectShadingCS.world(sampleHemisphere(rand));
-		*/
-	}
-	return numIsects;
-}
-
-
-bool isBlack( const float3& color ) 
-{
-	return color.x == 0 && color.y == 0 && color.z == 0;
 }
 
 float3 directLight(

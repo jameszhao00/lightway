@@ -1,0 +1,29 @@
+# MTL written from C:\Users\zhaoz3\Documents\lightway\assets\validation\spec_validation3.obj
+newmtl green
+Kd 0 1 0
+Ns 256
+d 1
+illum 2
+Ka 0 0 0
+Ks 0 0 0
+newmtl red
+Kd 1 0 0
+Ns 256
+d 1
+illum 2
+Ka 0 0 0
+Ks 0 0 0
+newmtl spec
+Kd 0 0 0
+Ns 4096
+d 1
+illum 2
+Ka 0 0 0
+Ks 1 1 1
+newmtl walls
+Kd 1 1 1
+Ns 256
+d 1
+illum 2
+Ka 0 0 0
+Ks 0 0 0

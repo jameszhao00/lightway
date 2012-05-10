@@ -75,6 +75,10 @@ private:
 	SampleDebugger sampleDebugger_;
 };
 
+inline bool isBlack( const float3& color ) 
+{
+	return color.x == 0 && color.y == 0 && color.z == 0;
+}
 bool hitLightFirst(const Intersection& sceneIsect, const Intersection& lightIsect);
 bool hitSceneFirst(const Intersection& sceneIsect, const Intersection& lightIsect);
 bool hitNothing(const Intersection& sceneIsect, const Intersection& lightIsect);

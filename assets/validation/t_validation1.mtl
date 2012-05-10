@@ -1,0 +1,36 @@
+# MTL written from C:\Users\zhaoz3\Documents\lightway\assets\validation\t_validation1.obj
+newmtl blue
+Kd 0 0 1
+Ns 256
+d 1
+illum 1
+Ka 0 0 0
+Ks 0 0 0
+newmtl green
+Kd 0 1 0
+Ns 256
+d 1
+illum 2
+Ka 0 0 0
+Ks 0 0 0
+newmtl red
+Kd 1 0 0
+Ns 256
+d 1
+illum 2
+Ka 0 0 0
+Ks 0 0 0
+newmtl refract
+Kd 0 0 0
+Ns 4096
+d 0
+illum 1
+Ka 0 0 0
+Ks 1 1 1
+newmtl walls
+Kd 1 1 1
+Ns 256
+d 1
+illum 2
+Ka 0 0 0
+Ks 0 0 0

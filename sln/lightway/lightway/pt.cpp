@@ -16,6 +16,7 @@ float3 directLight(Rand& rand, const RTScene& scene,
 	float3 wiDirectWorld;
 	//sample the light
 	light.sample(rand, pt.position, &lightPos, &wiDirectWorld, &lightPdf, &lightT);
+	
 
 	//see if we're occluded
 	Ray shadowRay(pt.position, wiDirectWorld);
@@ -89,6 +90,10 @@ void ptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 		float3 wiIndirect; 
 		float3 indirectWeight;
 		sceneIsect.material->sample(wo, rand.next01f2(), &wiIndirect, &indirectWeight);
+		if(isBlack(indirectWeight))
+		{
+			return;
+		}
 		float3 wiWorld = sceneIsectShadingCS.world(wiIndirect);
 		ray = Ray(sceneIsect.position, wiWorld);
 		throughput *= indirectWeight;

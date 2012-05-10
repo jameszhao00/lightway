@@ -42,14 +42,22 @@ unique_ptr<StaticScene> load_scene(string path, float3 translation, float scale)
 			aiColor3D diffuse;
 			ai_scene->mMaterials[ai_mesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
 			ai_scene->mMaterials[ai_mesh->mMaterialIndex]->Get(AI_MATKEY_COLOR_SPECULAR, spec);
-
-
-			if(diffuse.IsBlack() && !spec.IsBlack())
+			aiString matName;
+			ai_scene->mMaterials[ai_mesh->mMaterialIndex]->Get(AI_MATKEY_NAME, matName);
+			
+			if(string(matName.data).find("refract") != string::npos)
 			{
-				material->type = Material::PerfectReflection;
-				material->specular.specColor = float3(spec.r, spec.g, spec.b);
+				material->type = Material::SpecularTransmission;
+				material->specularTransmission.color = float3(spec.r, spec.g, spec.b);
+				material->specularTransmission.iorOutside = 1;
+				material->specularTransmission.iorInside = 1.2;
 			}
-			if(spec.IsBlack() && !diffuse.IsBlack())
+			else if(diffuse.IsBlack() && !spec.IsBlack())
+			{
+				material->type = Material::SpecularReflection;
+				material->specularReflection.specColor = float3(spec.r, spec.g, spec.b);
+			}
+			else if(spec.IsBlack() && !diffuse.IsBlack())
 			{
 				material->type = Material::Diffuse;
 				material->diffuse.albedo = float3(diffuse.r, diffuse.g, diffuse.b);
