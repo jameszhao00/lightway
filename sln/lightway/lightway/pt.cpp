@@ -33,11 +33,11 @@ float3 directLight(Rand& rand, const RTScene& scene,
 		&& lightIsect.lightId == light.id;
 	//HACK
 	//return float3(hitLight);//sceneIsect.hit ? sceneIsect.t : 0);
-	if(hitLight && facing(pt.position, pt.shadingNormal, lightIsect.position, lightIsect.normal))
+	if(hitLight && facing(pt.position, pt.normal, lightIsect.position, lightIsect.normal))
 	{
 		float3 wiDirect = shadingCS.local(wiDirectWorld);
 		float3 brdfEval = pt.material->eval(wiDirect, wo);
-		float3 cosTheta = float3(dot(pt.shadingNormal, wiDirectWorld));
+		float3 cosTheta = float3(dot(pt.normal, wiDirectWorld));
 		float3 le = light.material.emission;
 		return le * brdfEval * cosTheta / lightPdf;
 	}
@@ -48,10 +48,10 @@ void ptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 	float3 throughput(1);
 	Ray ray = sample->ray;
 	bool lastBounceWasDelta = false;
-	for(int depth = 0; depth < (bounces + 1); depth++)
+	//an extra vertex for sampling specular (delta) reflection/refractions
+	for(int vertIdx = 0; vertIdx < bounces + 1; vertIdx++)
 	{		
 		IntersectionQuery sceneIsectQuery(ray);
-		sceneIsectQuery.computeShadingNormals = true;
 
 		Intersection sceneIsect;
 		Intersection lightIsect;
@@ -62,31 +62,30 @@ void ptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 			sample->radiance += throughput * scene.background;
 			return;
 		}	
-		if(hitLightFirst(sceneIsect, lightIsect) && (depth == 0 || lastBounceWasDelta))
+		if(hitLightFirst(sceneIsect, lightIsect))
 		{
-			sample->radiance = throughput * lightIsect.material->emission;
+			if(vertIdx == 0 || lastBounceWasDelta)
+			{
+				sample->radiance += throughput * lightIsect.material->emission;
+			}
+			break;
 		}
+		//the vertexIdx == maxVertices pass is only for perfectly specular stuff
+		if(vertIdx == bounces) return;
 		lastBounceWasDelta = false;
 		if(!sceneIsect.hit) return;
 		
-		ShadingCS sceneIsectShadingCS(sceneIsect.shadingNormal);
+		ShadingCS sceneIsectShadingCS(sceneIsect.normal);
 		float3 wo = sceneIsectShadingCS.local(-ray.dir);
-		//HACK:
+
 		if(!sceneIsect.material->isDelta())
 		{
 			sample->radiance += throughput * directLight(rand, scene, sceneIsect, wo, sceneIsectShadingCS);
-			//HACK:
-			//return;
 		}
-		//HACK:
 		else
 		{
 			lastBounceWasDelta = true;
 		}
-		//HACK:
-		//return;
-		if(depth == bounces) return;
-
 		float3 wiIndirect; 
 		float3 indirectWeight;
 		sceneIsect.material->sample(wo, rand.next01f2(), &wiIndirect, &indirectWeight);

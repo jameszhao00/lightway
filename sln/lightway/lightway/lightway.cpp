@@ -21,8 +21,8 @@ Lightway::Lightway(QWidget *parent, Qt::WFlags flags)
 	viewport->renderCore = renderCore_.get();
 	scene = unique_ptr<RTScene>(new RTScene());
 	//scene->scene = load_scene("../../../assets/sponza.obj", float3(0, 0, 0), 1);
-	scene->scene = load_scene("../../../assets/validation/diffuse_validation5.obj", float3(0, 0, 0), 1);
-	//scene->scene = load_scene("../../../assets/validation/spec_validation3.obj", float3(0, 0, 0), 1);
+	//scene->scene = load_scene("../../../assets/validation/diffuse_validation5.obj", float3(0, 0, 0), 1);
+	scene->scene = load_scene("../../../assets/validation/spec_validation3.obj", float3(0, 0, 0), 1);
 	//scene->scene = load_scene("../../../assets/bunny.obj", float3(0, 0, 0), 5);
 	scene->make_accl();
 	renderCore_->scene = scene.get();

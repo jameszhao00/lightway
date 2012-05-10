@@ -37,7 +37,7 @@ float3 directLightSampleLight(Rand& rand, const RTScene& scene,
 	Intersection lightIsect;
 	intersectScene(scene, shadowQuery, &sceneIsect, &lightIsect);
 	bool hitLight = hitLightFirst(sceneIsect, lightIsect) && (lightIsect.lightId == light.id);
-	if(!(hitLight && facing(pt.position, pt.shadingNormal, lightIsect.position, lightIsect.normal)))
+	if(!(hitLight && facing(pt.position, pt.normal, lightIsect.position, lightIsect.normal)))
 	{
 		//we missed the light, or we're in shadow, or we're not facing it
 		return float3(0, 0, 0);
@@ -45,7 +45,7 @@ float3 directLightSampleLight(Rand& rand, const RTScene& scene,
 	float3 wiDirect = shadingCS.local(wiDirectWorld);
 	float brdfPdf = pt.material->pdf(wiDirect, wo);
 	float3 brdfEval = pt.material->eval(wiDirect, wo);;
-	float3 cosTheta = float3(dot(pt.shadingNormal, wiDirectWorld));
+	float3 cosTheta = float3(dot(pt.normal, wiDirectWorld));
 	float3 le = light.material.emission;
 	*lightId = lightIsect.lightId;
 	//balanced heuristic - fPdf / (fPdf + gPdf) * fPdf simplifies to 1/(fPdf + gPdf)
@@ -72,7 +72,6 @@ void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 	const float rrStartDepth = glm::min(glm::max(bounces / 2, 3), 5);
 	{
 		IntersectionQuery isectQuery(sample->ray);
-		isectQuery.computeShadingNormals = true;
 		Intersection lightIsect;
 		intersectScene(scene, isectQuery, &isect, &lightIsect);
 		if(hitLightFirst(isect, lightIsect))
@@ -82,7 +81,7 @@ void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 		}
 		woWorldRay = sample->ray;
 	}
-	for(int depth = 0; depth < (bounces + 1); depth++)
+	for(int vertIdx = 0; vertIdx < bounces; vertIdx++)
 	{		
 		if(!isect.hit)
 		{
@@ -90,7 +89,7 @@ void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 			return;
 		}
 
-		ShadingCS sceneIsectShadingCS(isect.shadingNormal);
+		ShadingCS sceneIsectShadingCS(isect.normal);
 		float3 wo = sceneIsectShadingCS.local(-woWorldRay.dir);
 		
 		int lightId = INVALID_LIGHT_ID;
@@ -115,14 +114,13 @@ void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 		//intersect with the scene
 		Ray nextWoWorldRay(isect.position, wiWorldIndirect);
 		IntersectionQuery nextSceneIsectQuery(nextWoWorldRay);
-		nextSceneIsectQuery.computeShadingNormals = true;
 
 		Intersection nextSceneIsect;
 		Intersection lightIsect;
 		intersectScene(scene, nextSceneIsectQuery, &nextSceneIsect, &lightIsect);
 		if(hitLightFirst(nextSceneIsect, lightIsect))
 		{
-			float cosThetaWI = dot(wiWorldIndirect, isect.shadingNormal);
+			float cosThetaWI = dot(wiWorldIndirect, isect.normal);
 			auto & light = *scene.light(lightIsect.lightId);
 			if(!bounceIsDelta)
 			{
@@ -135,21 +133,23 @@ void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 			}
 			else
 			{
-				sample->radiance += throughput * light.material.emission * cosThetaWI * brdfEval; 
+				//no cos for specular
+				sample->radiance += throughput * light.material.emission * brdfEval; 
 			}
-
+			break; //eyes block eye rays
 		}
 		//we can't use this weight for directLightSampleBrdf, b/c it includes the brdfPdf
 		throughput *= weight;
 		isect = nextSceneIsect;
 		woWorldRay = nextWoWorldRay;
-
-		if(depth > rrStartDepth)
+		/*
+		if(vertIdx > rrStartDepth)
 		{
 			float survivalProb = glm::min(luminance(throughput), 0.5f);
 			if(rand.next01() > survivalProb) break;
 			else throughput /= survivalProb;
 		}
+		*/
 	}
 }
 //russian roulette code

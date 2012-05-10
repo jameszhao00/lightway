@@ -44,23 +44,18 @@ int RenderCore::step(Rand& rand, int groupIdx)
 			
 			sampleDebugger_.shr.newSample(sample.xy);
 			
-			int desiredBounces =8;
-			includeDirect_ = true;
-			debugExclusiveBounce_ = 0;
+			int bounces = 8;
 			if(0)
 			{
-				bounces_ = desiredBounces;
-				ptMISRun(*scene, bounces_, rand, &sample);
+				ptMISRun(*scene, bounces, rand, &sample);
 			}
 			else if(0)
 			{
-				bounces_ = desiredBounces;
-				ptRun(*scene, bounces_, rand, &sample);
+				ptRun(*scene, bounces, rand, &sample);
 			}
 			else 
 			{
-				bounces_ = desiredBounces + 1;
-				bdptRun(*scene, bounces_, rand, &sample);
+				bdptRun(*scene, bounces, rand, &sample);
 			}
 			
 
@@ -216,5 +211,29 @@ bool visibleAndFacing( const Intersection& isectA, const Intersection& isectB, c
 	if(!sceneIsect.hit) return false;
 	//if(fabs(sceneIsect.t - desiredT) > 0.0001) return false;
 	if(sceneIsect.primitiveId != isectB.primitiveId) return false;
+	return true;
+}
+
+bool visibleAndFacing( const float3& posA, const float3& nA, 
+	const float3& posB, const float3& nB, 
+	const RTScene& scene )
+{
+
+	if(!facing(posA, nA, posB, nB))
+	{
+		return false;
+	}
+	//make sure they're facing each other first 
+	float3 dir = normalize(posB - posA);
+	//now trace the ray...
+	Ray ray(posA, dir);
+	IntersectionQuery query(ray);
+	float desiredT = glm::length(posB - posA);
+
+	Intersection sceneIsect;
+	intersectScene(scene, query, &sceneIsect, nullptr);
+	//see if we hit isect B
+	if(!sceneIsect.hit) return false;
+	if(fabs(sceneIsect.t - desiredT) > 0.0001) return false;
 	return true;
 }
