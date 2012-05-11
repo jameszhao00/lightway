@@ -6,7 +6,8 @@
 float3 directLight(Rand& rand, const RTScene& scene, 
 	const Intersection& pt, 
 	const float3& wo,
-	const ShadingCS& shadingCS)
+	const ShadingCS& shadingCS,
+	bool useShadingNormals)
 {
 	auto & light = scene.accl->lights[0];
 	float3 lightPos;
@@ -34,17 +35,20 @@ float3 directLight(Rand& rand, const RTScene& scene,
 		&& lightIsect.lightId == light.id;
 	//HACK
 	//return float3(hitLight);//sceneIsect.hit ? sceneIsect.t : 0);
-	if(hitLight && facing(pt.position, pt.normal, lightIsect.position, lightIsect.normal))
+	if(hitLight && facing(pt.position, 
+		useShadingNormals ? pt.shadingNormal : pt.normal, 
+		lightIsect.position, 
+		lightIsect.normal))
 	{
 		float3 wiDirect = shadingCS.local(wiDirectWorld);
 		float3 brdfEval = pt.material->eval(wiDirect, wo);
-		float3 cosTheta = float3(dot(pt.normal, wiDirectWorld));
+		float3 cosTheta = float3(dot(useShadingNormals ? pt.shadingNormal : pt.normal, wiDirectWorld));
 		float3 le = light.material.emission;
 		return le * brdfEval * cosTheta / lightPdf;
 	}
 	return float3(0);
 }
-void ptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
+void ptRun( const RTScene& scene, int bounces, Rand& rand, Sample* sample, bool useShadingNormals )
 {
 	float3 throughput(1);
 	Ray ray = sample->ray;
@@ -53,7 +57,7 @@ void ptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 	for(int vertIdx = 0; vertIdx < bounces + 1; vertIdx++)
 	{		
 		IntersectionQuery sceneIsectQuery(ray);
-
+		if(useShadingNormals) sceneIsectQuery.computeShadingNormals = true;
 		Intersection sceneIsect;
 		Intersection lightIsect;
 		intersectScene(scene, sceneIsectQuery, &sceneIsect, &lightIsect);
@@ -76,12 +80,13 @@ void ptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 		lastBounceWasDelta = false;
 		if(!sceneIsect.hit) return;
 		
-		ShadingCS sceneIsectShadingCS(sceneIsect.normal);
+		ShadingCS sceneIsectShadingCS(useShadingNormals ? sceneIsect.shadingNormal : sceneIsect.normal);
 		float3 wo = sceneIsectShadingCS.local(-ray.dir);
 
 		if(!sceneIsect.material->isDelta())
 		{
-			sample->radiance += throughput * directLight(rand, scene, sceneIsect, wo, sceneIsectShadingCS);
+			sample->radiance += throughput * 
+				directLight(rand, scene, sceneIsect, wo, sceneIsectShadingCS, useShadingNormals);
 		}
 		else
 		{

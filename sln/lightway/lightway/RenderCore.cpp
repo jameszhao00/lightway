@@ -45,17 +45,21 @@ int RenderCore::step(Rand& rand, int groupIdx)
 			sampleDebugger_.shr.newSample(sample.xy);
 			
 			int bounces = 8;
-			if(1)
+			if(0)
 			{
-				ptMISRun(*scene, bounces, rand, &sample);
+				ptMISRun(*scene, bounces, rand, &sample, false);
 			}
 			else if(0)
 			{
-				ptRun(*scene, bounces, rand, &sample);
+				ptRun(*scene, bounces, rand, &sample, false);
+			}
+			else if(1)
+			{
+				bdptRun(*scene, bounces, rand, &sample);
 			}
 			else 
 			{
-				bdptRun(*scene, bounces, rand, &sample);
+				bdptMisRun(*scene, bounces, rand, &sample);
 			}
 			
 

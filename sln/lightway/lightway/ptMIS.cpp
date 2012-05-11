@@ -63,7 +63,7 @@ float3 directLightSampleBrdf(const RectangularAreaLight& light,
 	return le * brdfEval * cosTheta * float3(powerHeuristic(brdfPdf, lightPdf)) / brdfPdf;
 }
 
-void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
+void ptMISRun( const RTScene& scene, int bounces, Rand& rand, Sample* sample, bool useShadingNormals )
 {
 	float3 throughput(1);
 

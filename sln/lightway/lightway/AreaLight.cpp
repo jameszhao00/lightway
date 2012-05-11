@@ -90,7 +90,7 @@ RectangularAreaLight createDefaultLight()
     light.corners[1] = light_verts[1];//float3(1, 39.5, -1);
     light.corners[2] = light_verts[2];//float3(1, 39.5, 1);
     light.corners[3] = light_verts[3];//float3(-1, 39.5, 1);
-    light.normal = float3(0, -1, 0);
+    light.normal = float3(0, 1, 0);
 	
 	light.material.emission = float3(6);
 	//light.material.emission = float3(2);

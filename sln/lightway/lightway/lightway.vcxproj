@@ -211,6 +211,7 @@
     </ClInclude>
     <ClCompile Include="asset.cpp" />
     <ClCompile Include="bdpt.cpp" />
+    <ClCompile Include="bdptMIS.cpp" />
     <ClCompile Include="bxdf.cpp" />
     <ClCompile Include="GeneratedFiles\Analysis\moc_lightway.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>

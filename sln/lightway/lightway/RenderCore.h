@@ -96,6 +96,7 @@ bool facing( const float3& ptA, const float3& na, const float3& ptB, const float
 bool visibleAndFacing(const Intersection& isectA, const Intersection& isectB, const RTScene& scene);
 bool visibleAndFacing(const float3& posA, const float3& nA, const float3& posB, const float3& nB, const RTScene& scene);
 
-void ptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample);
-void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample);
+void ptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample, bool useShadingNormals);
+void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample, bool useShadingNormals);
 void bdptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample);
+void bdptMisRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample);

@@ -20,21 +20,12 @@ struct PathVertex
 	float3 position;
 	const Material* material;
 	float3 throughput;
-	bool isDelta() const { return material->isDelta(); }
+	bool isDelta() const
+	{ 
+		//not delta if it's a light...
+		return isBlack(material->emission) && material->isDelta(); 
+	}
 };
-
-//e.g. if MAX_LIGHT_PATH_DEPTH is 2
-//eye isect[0]/throughput[0] ----throughput[1]---- isect[1] ----throughput[2]---- isect[2]
-const int LIGHT_PATH_VERTS = 5;
-
-//returns # of isects
-//PRE CONDITION
-//capacity of lightPathIsect/lightPathThroughputs = MAX_LIGHT_PATH_DEPTH + 1
-//POST CONDITION
-//lightPathIsect filled with MAX_LIGHT_PATH_DEPTH + 1 intersections
-//lightPathThroughputs filled with MAX_LIGHT_PATH_DEPTH + 1 throughputs... each describing transfer from 0->i
-//lightPathIsect[0] = starting point at light
-//lightPathThroughputs[0] = light emission * light area
 
 int createPath(const RTScene& scene, 
 	Rand& rand, 
@@ -95,7 +86,7 @@ int createEyePath(const RTScene& scene,
 {
 	return createPath(scene, rand, maxVerts, float3(1), initialRay, true, vertices);
 }
-int createLightPath2(const RTScene& scene, 
+int createLightPath(const RTScene& scene, 
 	Rand& rand, 
 	int maxVerts,
 	PathVertex vertices[])
@@ -110,7 +101,7 @@ int createLightPath2(const RTScene& scene,
 	float3 lightPdf = float3(1.f / (2 * PI * light.area()));
 	float3 alpha = light.material.emission * dot(woWorldLight, light.normal) / lightPdf;
 	//HACK: changed to intersect lights
-	return 1 + createPath(scene, rand, maxVerts - 1, alpha, lightRay, true, &vertices[1]);
+	return 1 + createPath(scene, rand, maxVerts - 1, alpha, lightRay, false, &vertices[1]);
 }
 
 float3 directLight(
@@ -134,9 +125,6 @@ float3 directLight(
 	//we cannot ignore the light here, as we need to differentiate b/t hit empty space
 	//and hit light
 
-	//HACK
-	//shadowRay.dir = normalize(light.corners[0] - pt.position);
-
 	IntersectionQuery shadowQuery(shadowRay);	
 	Intersection sceneIsect;
 	Intersection lightIsect;
@@ -155,10 +143,6 @@ float3 directLight(
 	}
 	return float3(0);
 }
-void expect(int a, int b, const char* msg)
-{
-	if(a != b) cout << msg << endl;
-}
 void bdptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 {
 	
@@ -169,35 +153,10 @@ void bdptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 	//we include direct eye->light connection
 	int maxEyeVertices = bounces + 1; //explicit vertices (the one at the eye is implicit)
 	int maxLightVertices = bounces;
-	int numLPV = createLightPath2(scene, rand, maxLightVertices, lpVerts);
+	int numLPV = createLightPath(scene, rand, maxLightVertices, lpVerts);
 	//starts at 2 vertices
 	int numEPV = createEyePath(scene, rand, maxEyeVertices, sample->ray, epVerts);
-	//maps path length to deltas
-	//lowest = 1 vertices (1 eye, 0 light)
-	/*
-	int deltasForPathLength[16];
-	for(int i = 0; i < 16; i++) deltasForPathLength[i] = 0;	
-	for(int epvIdx = 0; epvIdx < numEPV; epvIdx++)
-	{
-		auto & ev = epVerts[epvIdx];		
-		if(!isBlack(ev.material->emission)) continue; //we're the direct eye-light connection and hit a light
-		if(epvIdx == (maxEyeVertices - 1)) continue; //we're the direct eye-light connection but didn't hit a light
 
-		//this path has a shadow ray...
-		for(int lpvIdx = 0; lpvIdx < numLPV; lpvIdx++)
-		{			
-			auto & lv = lpVerts[lpvIdx];
-			int evCount = epvIdx + 2;
-			int lvCount = lpvIdx + 1;
-			//total vertices count
-			int vCount = evCount + lvCount;
-			int pathLength = vCount - 1;
-			if(ev.isDelta() || lv.isDelta()) deltasForPathLength[pathLength]++;
-			
-		}
-		
-	}
-	*/
 	//number of edges in the eye path that is non-specular
 	//the direct connection edge does not count
 	int epVariableNonSpecularEdges = 0; //initial excludes direct connection 
@@ -239,7 +198,8 @@ void bdptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 			
 			//the current vertex is already non-specular
 			//lpvIdx starts at one...
-			if(!lpVerts[lpvIdx-1].isDelta()) lpVariableNonSpecularEdges++;
+			//if lpvIdx is 1, we know 0 and 1 are non deltas
+			if(lpvIdx == 1 || (!lpVerts[lpvIdx-1].isDelta())) lpVariableNonSpecularEdges++;
 
 			int vCount = epvIdx + 2 + lpvIdx + 1;
 			int currentBounces = vCount - 2;
@@ -282,98 +242,4 @@ void bdptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 			}
 		}
 	}
-	
-	/*
-	//trace the eye ray 
-	Ray sceneRay = sample->ray;
-	for(int depth = 0; depth < (bounces + 1); depth++)
-	{
-		Intersection sceneIsect;
-		Intersection lightisect;
-		IntersectionQuery sceneIsectQuery(sceneRay);
-		intersectScene(scene, sceneIsectQuery, &sceneIsect, &lightisect);
-		if(hitLightFirst(sceneIsect, lightisect))
-		{
-			//there's NO shadow ray here! (so not depth + 1 + 1)
-			int pathLength = depth + 1;
-
-			float bdptWeight = (1.f / (pathLength));
-			sample->radiance += bdptWeight * throughput * lightisect.material->emission;
-
-		}
-		if(!sceneIsect.hit) return; //we didn't hit scene
-		//we only came here for the direct connection... 
-		if(depth == bounces) break;
-		
-		ShadingCS evShadingCS(sceneIsect.normal);
-		float3 woEV = evShadingCS.local(-sceneRay.dir);
-		for(int lightPathIsectIdx = 0; lightPathIsectIdx < numLPV; lightPathIsectIdx++)			
-		{
-			//there's a shadow ray here! (so +1)
-			int pathLength = (lightPathIsectIdx) + (depth + 1) + 1;
-			//todo: make the following depend on Russian Roulette data
-			//we lose a variability b/c our first eye path is not removable
-
-			float bidirectionalWeight = 1.f / (pathLength);
-			
-			
-			if(pathLength > (bounces + 1)) continue;
-
-			const auto & lv = lpVerts[lightPathIsectIdx];
-			if(visibleAndFacing(
-				lv.position,
-				lv.normal, 
-				sceneIsect.position, 
-				sceneIsect.normal, scene))
-			{
-				const auto & ev = sceneIsect;
-				//light vert to eye vert dir
-				float3 ev2lv = normalize(lv.position - ev.position);
-				//eye vert brdf
-				float3 wiEV = evShadingCS.local(ev2lv);
-				float3 evBrdfEval = ev.material->eval(wiEV, woEV);
-				//light vert brdf
-				float3 lvBrdfEval;
-				if(lightPathIsectIdx == 0)
-				{
-					lvBrdfEval = float3(1);
-				}
-				else
-				{				
-					ShadingCS lvShadingCS(lv.normal);
-					float3 wiLV = lvShadingCS.local(-ev2lv);
-					float3 woLV = lvShadingCS.local(lv.woWorld);
-					lvBrdfEval = lv.material->eval(wiLV, woLV);
-				}
-						
-				//geometry term
-				float g = dot(ev2lv, ev.normal) * dot(-ev2lv, lv.normal) / glm::distance2(lv.position, ev.position);
-				float3 lpT = lvBrdfEval * lv.throughput;
-				float3 epT = evBrdfEval * throughput;
-				float3 T = lpT * epT * g;
-				
-				sample->radiance += bidirectionalWeight * T;
-			}
-		}
-		//use brdf and sample a new direction direction 
-		float3 wiIndirect;
-		float3 brdfWeight;
-		sceneIsect.material->sample(woEV, float2(rand.next01(), rand.next01()), &wiIndirect, &brdfWeight);
-		float3 wiIndirectWorld = evShadingCS.world(wiIndirect);
-		sceneRay = Ray(sceneIsect.position, wiIndirectWorld);
-		//update throughput	
-		throughput *= brdfWeight;
-	}
-	*/
 }
-
-
-//russian roulette
-/*
-if(depth > rrStartDepth)
-{
-	float survivalProb = glm::min(luminance(throughput), 0.5f);
-	if(rand.next01() > survivalProb) break;
-	else throughput /= survivalProb;//glm::min(survivalProb * 2.f, 1.f);
-}
-*/
