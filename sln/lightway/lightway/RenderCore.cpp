@@ -53,7 +53,7 @@ int RenderCore::step(Rand& rand, int groupIdx)
 			{
 				ptRun(*scene, bounces, rand, &sample, false);
 			}
-			else if(1)
+			else if(0)
 			{
 				bdptRun(*scene, bounces, rand, &sample);
 			}

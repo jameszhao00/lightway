@@ -4,15 +4,16 @@
 #include "shapes.h"
 namespace bdptMIS
 {
-	struct PathVertex
+	struct PathVertexMIS
 	{
-		PathVertex() { }
-		PathVertex(const float3& normal, 
+		PathVertexMIS() { }
+		PathVertexMIS(const float3& normal, 
 			const float3& woWorld, 
 			const float3& position, 
 			const Material* material, 
-			const float3& a) 
-			: normal(normal), woWorld(woWorld), position(position), material(material), throughput(a)
+			const float3& a,
+			const float3& wo = float3(-10000000)) 
+			: normal(normal), woWorld(woWorld), position(position), material(material), throughput(a), wo(wo)
 		{
 
 		}
@@ -21,20 +22,39 @@ namespace bdptMIS
 		float3 position;
 		const Material* material;
 		float3 throughput;
+		float gWo; //geometry term
+
+		float pWi; //probability for i-1, i, i+1 path (does not exist at first/last verts)
+		float pWo; //probability for i+1, i, i-1 path (does not exist at first/last verts)
+		float pA; //probability for light
+
+		float3 wi; //does not exist at light vertex, last vertex
+		float3 wo; //does not exist at light vertex
 		bool isDelta() const
 		{ 
 			//not delta if it's a light...
 			return isBlack(material->emission) && material->isDelta(); 
 		}
 	};
-
+	void computePathWoGeometry(int numVerts, PathVertexMIS vertices[])
+	{
+		//compute geometry term
+		for(int i = 1; i < numVerts; i++)
+		{
+			const PathVertexMIS & curr = vertices[i];
+			const PathVertexMIS & prev = vertices[i-1];
+			float3 woWorld = normalize(curr.position - prev.position);
+			float d2 = glm::distance2(curr.position, prev.position);
+			vertices[i].gWo = dot(woWorld, curr.normal) * dot(-woWorld, prev.normal) / d2;
+		}
+	}
 	int createPath(const RTScene& scene, 
 		Rand& rand, 
 		int maxVerts,
 		const float3& initialAlpha, 
 		const Ray& initialRay,
 		bool includeLightIntersections,
-		PathVertex vertices[])
+		PathVertexMIS vertices[])
 	{
 		int numVerts = 0;
 		Ray ray = initialRay;
@@ -47,73 +67,83 @@ namespace bdptMIS
 			Intersection lightIsect;
 
 			intersectScene(scene, query, &isect, &lightIsect);
+			if(hitNothing(isect, lightIsect)) break;
+
+
 			if(hitLightFirst(isect, lightIsect))
 			{				
 				if(includeLightIntersections)
 				{
-					vertices[i] = PathVertex(lightIsect.normal, woWorld, lightIsect.position, lightIsect.material, 
-						alpha);
-					return numVerts + 1;
+					vertices[i] = PathVertexMIS(lightIsect.normal, woWorld, lightIsect.position, lightIsect.material, 
+						alpha); //light isect don't need wi/wo
+					numVerts++;
+					break;
 				}
 				else
 				{
-					return numVerts;
+					break;
 				}
 			}
-
-
-			if(!isect.hit) break;
-			else numVerts++;
-
-			vertices[i] = PathVertex(isect.normal, woWorld, isect.position, isect.material, alpha);
-
-			if(i == (maxVerts - 1)) break;
+			numVerts++;
 
 			ShadingCS isectShadingCS(isect.normal);
+			float3 wo = isectShadingCS.local(woWorld);
+			vertices[i] = PathVertexMIS(isect.normal, woWorld, isect.position, isect.material, alpha, wo);
+			
+			if(i == (maxVerts - 1)) break;
+
 			float3 wi;
 			float3 weight;
-			isect.material->sample(isectShadingCS.local(woWorld), rand.next01f2(), &wi, &weight);
+			isect.material->sample(wo, rand.next01f2(), &wi, &weight);
+			
+			vertices[i].pWi = isect.material->pdf(wi, wo);
+			if(i > 0) vertices[i].pWo = isect.material->pdf(wo, wi);
+
 			if(isBlack(weight))
 			{
 				break;
 			}
+			vertices[i].wi = wi;
 			float3 wiWorld = isectShadingCS.world(wi);		
 			ray.origin = isect.position;		
 			ray.dir = wiWorld;
 			alpha *= weight;
 		}
+
 		return numVerts;
 	}
 	int createEyePath(const RTScene& scene, 
 		Rand& rand, 
 		int maxVerts,
 		const Ray& initialRay,
-		PathVertex vertices[])
+		PathVertexMIS vertices[])
 	{
-		return createPath(scene, rand, maxVerts, float3(1), initialRay, true, vertices);
+		int numVerts = createPath(scene, rand, maxVerts, float3(1), initialRay, true, vertices);
+		if(numVerts > 0) vertices[0].pWo = 1;
 	}
 	int createLightPath(const RTScene& scene, 
 		Rand& rand, 
 		int maxVerts,
-		PathVertex vertices[])
+		PathVertexMIS vertices[])
 	{
 		const auto & light = *scene.light(0);
 		ShadingCS lightPosShadingCS(light.normal);
 		const float3 lightPos = light.samplePoint(rand);
 		const float3 woWorldLight = lightPosShadingCS.world(sampleHemisphere(rand));
 		Ray lightRay(lightPos, woWorldLight);
-		vertices[0] = PathVertex(light.normal, float3(0), lightPos, &light.material,
+		vertices[0] = PathVertexMIS(light.normal, float3(0), lightPos, &light.material,
 			light.material.emission * light.area());
 		float3 lightPdf = float3(1.f / (2 * PI * light.area()));
 		float3 alpha = light.material.emission * dot(woWorldLight, light.normal) / lightPdf;
-		//HACK: changed to intersect lights
+		vertices[0].pA = 1.f/light.area();
+
 		return 1 + createPath(scene, rand, maxVerts - 1, alpha, lightRay, false, &vertices[1]);
 	}
 
 	float3 directLight(
 		Rand& rand, 
 		const RTScene& scene, 
-		const PathVertex& vertex,
+		const PathVertexMIS& vertex,
 		const ShadingCS& shadingCS)
 	{
 		//TODO: this does not work for multiple lights!
@@ -154,8 +184,8 @@ namespace bdptMIS
 using namespace bdptMIS;
 void bdptMisRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 {	
-	PathVertex lpVerts[16];
-	PathVertex epVerts[16];
+	PathVertexMIS lpVerts[16];
+	PathVertexMIS epVerts[16];
 
 	//we disregard direct light->eye connection
 	//we include direct eye->light connection
@@ -220,6 +250,8 @@ void bdptMisRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 			bool visible = visibleAndFacing(lv.position, lv.normal, ev.position, ev.normal, scene);
 			if(visible)
 			{
+				
+
 				ShadingCS lvShadingCS(lv.normal);
 				
 				const float3 ev2lv = normalize(lv.position - ev.position);
@@ -228,20 +260,53 @@ void bdptMisRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 				const float3 lvWiWorld = -ev2lv;
 				float3 evBrdfEval = ev.material->eval(evWi, evWo);
 				float3 lvBrdfEval;
+				ShadingCS lvShadingCS(lv.normal);
+				float3 lvWi = lvShadingCS.local(lvWiWorld);
+				float3 lvWo = lvShadingCS.local(lv.woWorld);
 				if(lpvIdx == 0)
 				{
 					lvBrdfEval = float3(1);
 				}
 				else
 				{				
-					ShadingCS lvShadingCS(lv.normal);
-					float3 lvWi = lvShadingCS.local(lvWiWorld);
-					float3 lvWo = lvShadingCS.local(lv.woWorld);
 					lvBrdfEval = lv.material->eval(lvWi, lvWo);
 				}
 
 				float g = dot(evWiWorld, ev.normal) 
 					* dot(lvWiWorld, lv.normal) / glm::distance2(lv.position, ev.position);
+
+				//compute probabilities
+				{
+					float pSum = 0;
+					int epVertCount = 2 + epvIdx;
+					int lpVertCount = 1 + lpvIdx;	
+
+					float pLP = ev.gWo * ev.pWo / (lv.material->pdf(lvWi, lvWo) * g);
+					float pEP = 1/pLP;
+
+					for(int i = lpvIdx - 1; i > 0; i--) //start at i+2
+					{
+						int vertIdx = lpvIdx - i + epVertCount;
+
+						auto & prevVert = lpVerts[i-1];
+						auto & currVert = lpVerts[i];
+						auto & nextVert = lpVerts[i+1];
+						float pRatio = prevVert.pWi * currVert.gWo / (nextVert.pWo * nextVert.gWo);
+
+						p[vertIdx] = p[vertIdx - 1] * pRatio;
+					}
+					for(int i = epvIdx - 2; i > 0; i--) //start at i-2
+					{
+						int vertIdx = i + 1;
+						auto & prevVert = lpVerts[i-1];
+						auto & currVert = lpVerts[i];
+						auto & nextVert = lpVerts[i+1];
+						float pRatio = (nextVert.pWo * nextVert.gWo) / (prevVert.pWi * currVert.gWo);
+
+						p[vertIdx] = p[vertIdx + 1] * pRatio;
+					}
+					//take into account probabilities at endpoints
+				}
 
 				float3 lpT = lvBrdfEval * lv.throughput;
 				float3 epT = evBrdfEval * ev.throughput;
