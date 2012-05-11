@@ -21,7 +21,11 @@ namespace bdptMIS
 		float3 position;
 		const Material* material;
 		float3 throughput;
-		bool isDelta() const { return material->isDelta(); }
+		bool isDelta() const
+		{ 
+			//not delta if it's a light...
+			return isBlack(material->emission) && material->isDelta(); 
+		}
 	};
 
 	int createPath(const RTScene& scene, 
@@ -29,7 +33,7 @@ namespace bdptMIS
 		int maxVerts,
 		const float3& initialAlpha, 
 		const Ray& initialRay,
-		bool intersectLights,
+		bool includeLightIntersections,
 		PathVertex vertices[])
 	{
 		int numVerts = 0;
@@ -41,18 +45,23 @@ namespace bdptMIS
 			IntersectionQuery query(ray);
 			Intersection isect;
 			Intersection lightIsect;
-			if(intersectLights)
-			{
-				intersectScene(scene, query, &isect, &lightIsect);
-				if(hitLightFirst(isect, lightIsect))
-				{				
+
+			intersectScene(scene, query, &isect, &lightIsect);
+			if(hitLightFirst(isect, lightIsect))
+			{				
+				if(includeLightIntersections)
+				{
 					vertices[i] = PathVertex(lightIsect.normal, woWorld, lightIsect.position, lightIsect.material, 
 						alpha);
 					return numVerts + 1;
 				}
+				else
+				{
+					return numVerts;
+				}
 			}
-			else intersectScene(scene, query, &isect, nullptr);
-		
+
+
 			if(!isect.hit) break;
 			else numVerts++;
 
@@ -98,7 +107,7 @@ namespace bdptMIS
 		float3 lightPdf = float3(1.f / (2 * PI * light.area()));
 		float3 alpha = light.material.emission * dot(woWorldLight, light.normal) / lightPdf;
 		//HACK: changed to intersect lights
-		return 1 + createPath(scene, rand, maxVerts - 1, alpha, lightRay, true, &vertices[1]);
+		return 1 + createPath(scene, rand, maxVerts - 1, alpha, lightRay, false, &vertices[1]);
 	}
 
 	float3 directLight(

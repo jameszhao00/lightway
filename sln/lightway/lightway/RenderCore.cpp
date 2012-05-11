@@ -44,7 +44,7 @@ int RenderCore::step(Rand& rand, int groupIdx)
 			
 			sampleDebugger_.shr.newSample(sample.xy);
 			
-			int bounces = 8;
+			int bounces = 3;
 			if(0)
 			{
 				ptMISRun(*scene, bounces, rand, &sample, false);

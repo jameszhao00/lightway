@@ -32,7 +32,7 @@ int createPath(const RTScene& scene,
 	int maxVerts,
 	const float3& initialAlpha, 
 	const Ray& initialRay,
-	bool intersectLights,
+	bool includeLightIntersections,
 	PathVertex vertices[])
 {
 	int numVerts = 0;
@@ -44,17 +44,22 @@ int createPath(const RTScene& scene,
 		IntersectionQuery query(ray);
 		Intersection isect;
 		Intersection lightIsect;
-		if(intersectLights)
-		{
-			intersectScene(scene, query, &isect, &lightIsect);
-			if(hitLightFirst(isect, lightIsect))
-			{				
+
+		intersectScene(scene, query, &isect, &lightIsect);
+		if(hitLightFirst(isect, lightIsect))
+		{				
+			if(includeLightIntersections)
+			{
 				vertices[i] = PathVertex(lightIsect.normal, woWorld, lightIsect.position, lightIsect.material, 
 					alpha);
 				return numVerts + 1;
 			}
+			else
+			{
+				return numVerts;
+			}
 		}
-		else intersectScene(scene, query, &isect, nullptr);
+
 		
 		if(!isect.hit) break;
 		else numVerts++;
