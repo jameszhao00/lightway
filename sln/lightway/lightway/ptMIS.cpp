@@ -27,6 +27,7 @@ float3 directLightSampleLight(Rand& rand, const RTScene& scene,
 	//sample the light
 	light.sample(rand, pt.position, &lightPos, &wiDirectWorld, &lightPdf, &lightT);
 
+	if(!facing(pt.position, pt.normal, lightPos, light.normal)) return float3(0);
 	//see if we're occluded
 	Ray shadowRay(pt.position, wiDirectWorld);
 	//we cannot ignore the light here, as we need to differentiate b/t hit empty space
@@ -142,6 +143,8 @@ void ptMISRun( const RTScene& scene, int bounces, Rand& rand, Sample* sample, bo
 			}
 			break; //eyes block eye rays
 		}
+		//for collision precision
+		if(dot(-wiWorldIndirect, nextSceneIsect.normal) <= 0) break;
 		//we can't use this weight for directLightSampleBrdf, b/c it includes the brdfPdf
 		throughput *= weight;
 		isect = nextSceneIsect;

@@ -44,8 +44,8 @@ int RenderCore::step(Rand& rand, int groupIdx)
 			
 			sampleDebugger_.shr.newSample(sample.xy);
 			
-			int bounces = 3;
-			if(0)
+			int bounces = 8 ;
+			if(1)
 			{
 				ptMISRun(*scene, bounces, rand, &sample, false);
 			}
@@ -59,7 +59,7 @@ int RenderCore::step(Rand& rand, int groupIdx)
 			}
 			else 
 			{
-				bdptMisRun(*scene, bounces, rand, &sample);
+				bdptMisRun(*scene, bounces, active_camera->forward, rand, &sample);
 			}
 			
 
@@ -111,6 +111,7 @@ RenderCore::~RenderCore()
 }
 void RenderCore::startWorkThreads()
 {
+	//HACK:
 	cachedWorkThreadN_ = boost::thread::hardware_concurrency() - 1;
 	for(int i = 0; i < cachedWorkThreadN_; i++)
 	{
@@ -135,9 +136,10 @@ void RenderCore::workThread(int groupIdx)
 	Rand rand(groupIdx);
 	int iteration = 0;
 	auto start = boost::chrono::system_clock::now();
+	//HACK:
 	while(!stopSignal_)
 		//&& boost::chrono::duration_cast<boost::chrono::milliseconds>(boost::chrono::system_clock::now() - start).
-		//count() < 15000)
+		//count() < 5000)
 	{
 		step(rand, groupIdx);
 		iteration++;

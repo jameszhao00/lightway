@@ -69,7 +69,7 @@ struct Ray
 
 struct IntersectionQuery
 {
-	IntersectionQuery(const Ray& pRay, float pMaxT = INF, float pMinT = 0.00001f, float pMinCosTheta = 0.00001f, bool computeShadingNormals = false) :	
+	IntersectionQuery(const Ray& pRay, float pMaxT = INF, float pMinT = 0.0001f, float pMinCosTheta = 0.00001f, bool computeShadingNormals = false) :	
 		ray(pRay), maxT(pMaxT), minT(pMinT), minCosTheta(pMinCosTheta), computeShadingNormals(computeShadingNormals)
 	{
 	}

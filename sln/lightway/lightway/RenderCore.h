@@ -99,4 +99,4 @@ bool visibleAndFacing(const float3& posA, const float3& nA, const float3& posB, 
 void ptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample, bool useShadingNormals);
 void ptMISRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample, bool useShadingNormals);
 void bdptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample);
-void bdptMisRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample);
+void bdptMisRun(const RTScene& scene, int bounces, const float3& forward, Rand& rand, Sample* sample);

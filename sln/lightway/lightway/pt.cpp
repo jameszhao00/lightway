@@ -50,6 +50,8 @@ float3 directLight(Rand& rand, const RTScene& scene,
 }
 void ptRun( const RTScene& scene, int bounces, Rand& rand, Sample* sample, bool useShadingNormals )
 {
+	//int debugPathLength =2;
+
 	float3 throughput(1);
 	Ray ray = sample->ray;
 	bool lastBounceWasDelta = false;
@@ -71,6 +73,8 @@ void ptRun( const RTScene& scene, int bounces, Rand& rand, Sample* sample, bool 
 		{
 			if(vertIdx == 0 || lastBounceWasDelta)
 			{
+				//HACK:
+				//if((vertIdx+2-1) == debugPathLength)
 				sample->radiance += throughput * lightIsect.material->emission;
 			}
 			break;
@@ -85,6 +89,8 @@ void ptRun( const RTScene& scene, int bounces, Rand& rand, Sample* sample, bool 
 
 		if(!sceneIsect.material->isDelta())
 		{
+			//HACK: 
+			//if((vertIdx+3-1) == debugPathLength)
 			sample->radiance += throughput * 
 				directLight(rand, scene, sceneIsect, wo, sceneIsectShadingCS, useShadingNormals);
 		}

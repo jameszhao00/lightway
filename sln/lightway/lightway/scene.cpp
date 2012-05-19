@@ -6,6 +6,8 @@ embree::Vec3f toEmbree(float3 v)
 {
 	return embree::Vec3f(v.x, v.y, v.z);
 }
+//May not return correct isect (precision issues -> ray can pass through a surfae)
+//so isect normal may be parallel to ray
 void AccelScene::intersect(const IntersectionQuery& query,
 	Intersection* sceneIsect,
 	Intersection* lightIsect) const
@@ -16,6 +18,7 @@ void AccelScene::intersect(const IntersectionQuery& query,
 		embree::Ray ray(toEmbree(query.ray.origin), toEmbree(query.ray.dir), query.minT, query.maxT);
 		embree::Hit sceneHit;
 		intersector->intersect(ray, sceneHit);
+		
 		if(sceneHit)
 		{
 			int triIdx = sceneHit.id0;
@@ -29,9 +32,8 @@ void AccelScene::intersect(const IntersectionQuery& query,
 				sceneIsect->shadingNormal = tri.shadingNormals(float2(sceneHit.u, sceneHit.v));
 			}
 			sceneIsect->normal = tri.normal;
-			
-
 			sceneIsect->position = query.ray.at(sceneHit.t);
+
 			sceneIsect->primitiveId = sceneHit.id0;
 		}
 	}
@@ -51,11 +53,10 @@ unique_ptr<AccelScene> makeAccelScene(const StaticScene* scene)
 	{
 		auto & sourceTri = scene->triangles.at(triIdx);
 		embree::BuildTriangle buildTri(
-			toEmbree(sourceTri.vertices[0].position), 
+			toEmbree(sourceTri.vertices[0].position),
 			toEmbree(sourceTri.vertices[1].position), 
 			toEmbree(sourceTri.vertices[2].position), 
-			triIdx,
-			0);
+			triIdx);		
 		buildTris.push_back(buildTri);
 	}
 	unique_ptr<AccelScene> accelScene(new AccelScene());

@@ -1,3 +1,10 @@
+5/18
+- invalid intersections causing negative G terms 
+	- invalid intersection caused by precision issues (0.999999 vs 1)
+- 2 hidden mistakes can cause the image to look correct
+- set g/pwi to 1... see if it matches reference
+
+
 5/9
 - the bdpt is slightly off (darker) compared to the ref in the diffuse scene
 	- problem caused by quitting if we hit a light in bdpt, but not in ptmis/pt

@@ -136,8 +136,6 @@ float3 directLight(
 	intersectScene(scene, shadowQuery, &sceneIsect, &lightIsect);
 	bool hitLight = hitLightFirst(sceneIsect, lightIsect) 
 		&& lightIsect.lightId == light.id;
-	//HACK
-	//return float3(hitLight);//sceneIsect.hit ? sceneIsect.t : 0);
 	if(hitLight && facing(vertex.position, vertex.normal, lightIsect.position, lightIsect.normal))
 	{
 		float3 wiDirect = shadingCS.local(wiDirectWorld);
@@ -230,7 +228,6 @@ void bdptRun(const RTScene& scene, int bounces, Rand& rand, Sample* sample)
 				}
 				else
 				{				
-					ShadingCS lvShadingCS(lv.normal);
 					float3 lvWi = lvShadingCS.local(lvWiWorld);
 					float3 lvWo = lvShadingCS.local(lv.woWorld);
 					lvBrdfEval = lv.material->eval(lvWi, lvWo);

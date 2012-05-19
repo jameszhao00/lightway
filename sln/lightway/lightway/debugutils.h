@@ -27,6 +27,7 @@ inline void lwassert_validfloat(float v, int line_num = -1)
 inline void lwassert_validvec(float3 v, int line_num = -1)
 {
 }
+#define LWASSERT_G(X, Y) ((void)0)
 #define LWASSERT_VALIDFLOAT(X) ((void)0)
 #define LWASSERT_VALIDVEC(X) ((void)0)
 template<typename T>
@@ -85,6 +86,7 @@ inline void lwassert_greater(float a, float b, int line_num = -1)
 		__debugbreak();
 	}
 }
+#define LWASSERT_G(X, Y) lwassert_greater((X), (Y), __LINE__)
 inline void lwassert_less(float a, float b, int line_num = -1)
 {
 	if(!(a < b)) 
@@ -122,14 +124,15 @@ inline void lwassert_validvec(float3 v, int line_num = -1)
 #define LWASSERT_VALIDVEC(X) lwassert_validvec((X), __LINE__)
 #define LWASSERT_VALIDFLOAT(X) lwassert_validfloat((X), __LINE__)
 template<typename T>
-inline void lwassert(T b)
+inline void lwassert(T b, int line_num = -1)
 {
 	if(!(bool)b)
 	{
-		printf("assert failed\n"); 
+		printf("(L%d) assert failed\n", line_num); 
 		__debugbreak(); 
 	}
 }
+#define LWASSERT(X) lwassert((X), __LINE__)
 
 inline void lwassert_notequal(float3 a, float3 b)
 {
