@@ -49,6 +49,9 @@
     <Filter Include="Source Files\integrators">
       <UniqueIdentifier>{0e5f4ae7-17ac-4d6e-b72e-1fd8b7993c1f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="BVH">
+      <UniqueIdentifier>{3254057c-871f-4e5d-a309-a9e42167a160}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -159,6 +162,9 @@
     <ClCompile Include="bdptMIS.cpp">
       <Filter>Source Files\integrators</Filter>
     </ClCompile>
+    <ClCompile Include="bvh.cpp">
+      <Filter>BVH</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -205,6 +211,9 @@
     </ClInclude>
     <ClInclude Include="AreaLight.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bvh.h">
+      <Filter>BVH</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

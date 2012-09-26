@@ -211,6 +211,7 @@
     <ClCompile Include="asset.cpp" />
     <ClCompile Include="bdpt.cpp" />
     <ClCompile Include="bdptMIS.cpp" />
+    <ClCompile Include="bvh.cpp" />
     <ClCompile Include="bxdf.cpp" />
     <ClCompile Include="GeneratedFiles\Analysis\moc_lightway.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -324,6 +325,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="asset.h" />
+    <ClInclude Include="bvh.h" />
     <ClInclude Include="bxdf.h" />
     <ClInclude Include="debugutils.h" />
     <ClInclude Include="GeneratedFiles\ui_lightway.h" />
